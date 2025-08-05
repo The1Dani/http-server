@@ -86,6 +86,7 @@ int test_get_word(const char *str, const char *expected) {
         return 1;
     }
     
+    lex_destroy(lex);
     return 0;
 }
 
@@ -106,6 +107,7 @@ int test_get_words(const char *str, const char *expected[]) {
         idx++;
     }
 
+    lex_destroy(lex);
     return ret;
 }
 

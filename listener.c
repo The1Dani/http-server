@@ -34,6 +34,7 @@ int get_soc_str(char **buff, int connfd) {
     char t_buff[BUFF_SIZE];
     
     while((n = read(connfd, t_buff, sizeof(t_buff))) == BUFF_SIZE) {
+        //TODO
         *buff = realloc(*buff, sizeof(char) * BUFF_SIZE * n_chunk);
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
         n_chunk++;
@@ -44,6 +45,7 @@ int get_soc_str(char **buff, int connfd) {
     if ( n == 0 ) {
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
     } else {
+        //TODO
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
     }

@@ -2,6 +2,11 @@
 #include <stddef.h>
 #include <string.h>
 
+void lstrndup(const char *from, char **to, size_t n) {
+    if (*to != NULL) free(*to);
+    *to = NULL;
+    *to = strndup(from, n);
+}
 
 void lex_destroy(Lexer *lex) {
     if (lex->str != NULL) 
@@ -73,9 +78,12 @@ void lex_get_word(Lexer *lex) {
         lex->status = LEXER_EOF;
         return;
     }
-    lex->str = realloc(lex->str, sizeof(char) * (w_len + 1));
-    memcpy(lex->str, lex->src + lex->cur, w_len);
-    lex->str[w_len] = '\0';
+    // TODO
+    // lex->str = realloc(lex->str, sizeof(char) * (w_len + 1));
+    // memcpy(lex->str, lex->src + lex->cur, w_len);
+    // lex->str[w_len] = '\0';
+    // lex->str = strndup(lex->src + lex->cur, w_len); //new
+    lstrndup(lex->src + lex->cur, &lex->str, w_len); //nnew
     lex->cur += w_len;    
     lex->status = LEXER_SUCCSESS;
 }
@@ -107,9 +115,12 @@ void lex_get_line(Lexer *lex) {
     }
     
     if (lex->status == LEXER_SUCCSESS) {
-        lex->str = realloc(lex->str, sizeof(char) * (line_len + 1));
-        memcpy(lex->str, lex->src + start, line_len);
-        lex->str[line_len] = '\0';
+        //TODO
+        // lex->str = realloc(lex->str, sizeof(char) * (line_len + 1));
+        // memcpy(lex->str, lex->src + start, line_len);
+        // lex->str[line_len] = '\0';
+        // lex->str = strndup(lex->src + start, line_len);//new
+        lstrndup(lex->src + start, &lex->str, line_len);
         lex->cur += line_len;
     }
 }

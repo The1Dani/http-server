@@ -12,7 +12,7 @@ listener: listener.c simple-lexer.o
 simple-lexer.o: simple-lexer.c simple-lexer.h
 	gcc -g -c simple-lexer.c -o $(build-folder)/simple-lexer.o
 
-test: simple-lexer lexer-tests.c
+test: simple-lexer.o lexer-tests.c
 	gcc lexer-tests.c $(obj) -g -o  $(build-folder)/tests &&\
 	$(build-folder)/tests
 
