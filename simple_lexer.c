@@ -1,6 +1,7 @@
 #include "simple_lexer.h"
 #include "da.h"
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 
 void lstrndup(const char *from, char **to, size_t n) {
@@ -126,7 +127,7 @@ void lex_get_line(Lexer *lex) {
     }
 }
 
-int get_words(const char *str, char ***list) {
+int get_words_from_delim(const char *str, const char *delim, char ***list) {
     
     if (*list != NULL) 
         free(list);
@@ -135,7 +136,6 @@ int get_words(const char *str, char ***list) {
 
     char *token = NULL;
     char *saveptr = NULL;
-    const char *delim = WHITE_SPACE;
     
     Da_str str_arr = da_str_new();
 
@@ -150,4 +150,28 @@ int get_words(const char *str, char ***list) {
     *list = str_arr.list;
     
     return str_arr.size;
+}
+
+
+int get_words(const char *str, char ***list) {
+    return get_words_from_delim(str, WHITE_SPACE, list);
+}
+
+void concat_list(char**list, int size, char** dest) {
+    
+    if (*dest != NULL) {
+        return;
+    }
+    char *dst = *dest;
+
+    dst = strdup(list[0]);
+    dst = realloc(dst, strlen(dst) + 2);
+    strncat(dst, ":", 2);
+
+    for (int i = 1; i < size; i++) {
+        dst = realloc(dst, sizeof(char *) * (strlen(dst) + strlen(list[i]) + 2));
+        strncat(dst, ":", 2);
+        strncat(dst, list[i], (strlen(dst) + strlen(list[i]) + 1));
+    }
+
 }

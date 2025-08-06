@@ -9,7 +9,8 @@
 #include <stdbool.h>
 
 #define SUPPORTED_PROTOCOL "HTTP/1.1"
-
+#define HTTP_STATUS_OK "200"
+#define RESP_OK SUPPORTED_PROTOCOL" " HTTP_STATUS_OK " OK\r\n" 
 
 typedef struct {
 

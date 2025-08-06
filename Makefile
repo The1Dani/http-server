@@ -1,4 +1,4 @@
-all: sender listener
+all: __build_folder sender listener
 
 build_folder = ./build
 obj = simple_lexer da parse_http
@@ -8,6 +8,8 @@ obj_folder = $(foreach f,$(obj),$(build_folder)/$(f).o)
 external_obj_folder = $(foreach f,$(externals),$(build_folder)/$(f)_ext.o)
 all_obj = $(external_obj_folder) $(obj_folder)
 
+__build_folder:
+	@mkdir -p './build' 
 
 sender: sender.c
 	gcc -g sender.c -o $(build_folder)/$@

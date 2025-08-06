@@ -53,6 +53,10 @@ int get_soc_str(char **buff, int connfd) {
 
 }
 
+void http_send_resp_ok(int connfd) {
+    write(connfd, RESP_OK, strlen(RESP_OK));
+    close(connfd);
+}
 
 void echo_message(int connfd) {
     
@@ -76,6 +80,8 @@ void echo_message(int connfd) {
 
     http_parse_req(da.list, da.size);
 
+    http_send_resp_ok(connfd);
+
     lex_destroy(lex);
     free(buff);
 }
@@ -91,6 +97,17 @@ int main() {
         exit(1);
     }
     printf("Socket Created Successfully!\n");
+
+    /*To reuse address*/
+    /**
+     * TODO Read about setsockopt  
+     */
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt");
+        close(sockfd);
+        exit(EXIT_FAILURE);
+    }
 
     servaddr = (struct sockaddr_in){
         .sin_family = AF_INET,

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include "simple-lexer.h"
+#include "simple_lexer.h"
 
 #define TEST_STR "This is a string which has more than one line\nThis is the second line\nThe third"
 #define EXPECTED "This is a string which has more than one line"

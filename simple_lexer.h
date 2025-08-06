@@ -39,9 +39,13 @@ void lex_get_line(Lexer *lex);
 
 void lex_get_word(Lexer *lex);
 
+int get_words_from_delim(const char *str, const char *delim, char ***list);
+
 int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
+
+void concat_list(char**list, int size, char** dest);
 
 /*It consumes all whitespace till the next word start*/
 int get_word_len(Lexer *len);

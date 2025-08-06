@@ -1,4 +1,8 @@
 #include "parse_http.h"
+#include "external/map.h"
+#include "simple_lexer.h"
+#include <stdbool.h>
+#include <stddef.h>
 
 int is_end(const char *s) {
     if (strlen(s) != 1) return 0;
@@ -7,7 +11,20 @@ int is_end(const char *s) {
 }
 
 bool parse_field(const char *line, map_t *m) {
-    //TODO
+
+    char **tokens = NULL;
+    int n_tokens = get_words_from_delim(line, ":", &tokens);
+    char *val = NULL;
+    if (n_tokens <= 1) return false;
+    if (n_tokens > 2) {
+        concat_list(tokens + 1, n_tokens - 1, &val); //TODO Free the unused tokens in function    
+    } else val = tokens[1];
+    char *key = tokens[0];
+
+    if (map_set(m, key, val) == -1) {
+        return false;
+    }
+
     return false;
 }
 
@@ -40,17 +57,21 @@ Req *http_parse_req(char **lines, size_t line_count) {
     printf("The idents parsed succsess\n");
     printf("METHOD: %s\nURI: %s\nPROTOCOL: %s\n", req->method, req->uri, req->protocol);
 
-    exit(0);
     /*Parse Fields*/
-    for (size_t i = 0; i < line_count; i++) {
+    size_t i = 0;
+    for (; i < line_count; i++) {
         if (is_end(lines[i])) {
             break;
         }
-        if (parse_field(lines[i], fields)) return NULL;
+        if (!parse_field(lines[i], fields)) return NULL;
     }
-    /*Parse Body*/
-    //TODO
 
-    free(fields);
-    return NULL;
+    /*Parse Body*/
+    char *body = NULL;
+    concat_list(lines + i, line_count - i - 1, &body);
+
+    req->body = body;
+    req->fileds = fields;
+
+    return req;
 }
