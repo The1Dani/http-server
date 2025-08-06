@@ -7,7 +7,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <string.h>
-#include "simple-lexer.h"
+#include "simple_lexer.h"
+#include "da.h"
+#include "parse_http.h"
 
 typedef struct sockaddr sockaddr;
 
@@ -15,9 +17,6 @@ typedef struct sockaddr sockaddr;
 #define PORT 8080
 #define QUE_LEN 5
 #define BUFF_SIZE 8
-
-//TODO: Create a github repo and upload these source codes
-
 
 void clean_and_exit(int sockfd, int status) {
     close(sockfd);
@@ -34,7 +33,6 @@ int get_soc_str(char **buff, int connfd) {
     char t_buff[BUFF_SIZE];
     
     while((n = read(connfd, t_buff, sizeof(t_buff))) == BUFF_SIZE) {
-        //TODO
         *buff = realloc(*buff, sizeof(char) * BUFF_SIZE * n_chunk);
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
         n_chunk++;
@@ -44,13 +42,15 @@ int get_soc_str(char **buff, int connfd) {
 
     if ( n == 0 ) {
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
-    } else {
-        //TODO
+    } else if ( n != -1 ){
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
+    } else {
+        exit(1);
     }
     (*buff)[str_lenght] = '\0';
     return str_lenght;
+
 }
 
 
@@ -61,18 +61,20 @@ void echo_message(int connfd) {
     Lexer lexer = {0};
     Lexer *lex = &lexer;
     lex->src = buff;
+    Da_str da = da_str_new();
 
+    int at = 0;
     for(;;){    
         lex_get_line(lex);
         if (lex->status != LEXER_SUCCSESS) break;    
         char *line = lex->str;
+        da_str_push(&da, strdup(line)); //!Memory leak (free strings and array)
         printf(ESC GREEN"Message:"ESC_CLOSE" %s\n", line);
     }
-
-
-
     if (buff == NULL) exit(1);
-    printf(ESC RED"Message_Buf:"ESC_CLOSE" %s", buff);
+    // printf(ESC RED"Message_Buf:"ESC_CLOSE" %s", buff);
+
+    http_parse_req(da.list, da.size);
 
     lex_destroy(lex);
     free(buff);

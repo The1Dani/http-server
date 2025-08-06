@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "da.h"
 
 #define ESC "\x1b"
 #define RED "[31m"
 #define GREEN "[32m"
 #define ESC_CLOSE "\x1b[0m"
+#define WHITE_SPACE "\x09\x0a\x0b\x0c\x0d\x20"
 
 enum {
     LEXER_SUCCSESS,
@@ -35,7 +37,9 @@ int get_line_len(const char *str);
 
 void lex_get_line(Lexer *lex);
 
-void lex_get_word(Lexer *len);
+void lex_get_word(Lexer *lex);
+
+int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
 

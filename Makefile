@@ -1,20 +1,21 @@
 all: sender listener
 
-build-folder = ./build
-obj = $(build-folder)/simple-lexer.o
+build_folder = ./build
+obj = simple_lexer map da parse_http
+obj_folder = $(foreach f,$(obj),$(build_folder)/$(f).o)
 
 sender: sender.c
-	gcc -g sender.c -o $(build-folder)/sender
+	gcc -g sender.c -o $(build_folder)/$@
 
-listener: listener.c simple-lexer.o
-	gcc -g listener.c $(obj) -o $(build-folder)/listener
+listener: listener.c $(obj_folder)
+	gcc -g listener.c $(obj_folder) -o $(build_folder)/listener
 
-simple-lexer.o: simple-lexer.c simple-lexer.h
-	gcc -g -c simple-lexer.c -o $(build-folder)/simple-lexer.o
+test: lexer-tests.c $(obj_folder)
+	gcc lexer-tests.c $(obj_folder) -g -o  $(build_folder)/tests &&\
+	$(build_folder)/tests
 
-test: simple-lexer.o lexer-tests.c
-	gcc lexer-tests.c $(obj) -g -o  $(build-folder)/tests &&\
-	$(build-folder)/tests
+$(build_folder)/%.o: %.c %.h
+	gcc -g -c $< -o $@
 
 clean:
-	rm -rf $(build-folder)/*
+	rm -rf $(build_folder)/*

@@ -1,4 +1,5 @@
-#include "simple-lexer.h"
+#include "simple_lexer.h"
+#include "da.h"
 #include <stddef.h>
 #include <string.h>
 
@@ -125,3 +126,27 @@ void lex_get_line(Lexer *lex) {
     }
 }
 
+int get_words(const char *str, char ***list) {
+    
+    if (list != NULL) 
+        free(list);
+    
+    char *body = strdup(str);
+
+    char *token = NULL;
+    char *saveptr = NULL;
+    const char *delim = WHITE_SPACE;
+    
+    Da_str str_arr = da_str_new();
+
+    for (;;) {
+        token = strtok_r(body, delim, &saveptr);
+        if (token == NULL) 
+            break;
+        da_str_push(&str_arr, token);
+    }
+    *list = str_arr.list;
+    
+    free(body);
+    return str_arr.size;
+}
