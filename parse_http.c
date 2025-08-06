@@ -19,9 +19,8 @@ Req *http_parse_req(char **lines, size_t line_count) {
 
     /*Parse Idents*/
     //TODO
-    char ***list_ptr = NULL;
-    int n_words = get_words(idents, list_ptr);
-    char **list = *list_ptr;
+    char **list = NULL;
+    int n_words = get_words(idents, &list);
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {

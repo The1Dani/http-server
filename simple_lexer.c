@@ -128,7 +128,7 @@ void lex_get_line(Lexer *lex) {
 
 int get_words(const char *str, char ***list) {
     
-    if (list != NULL) 
+    if (*list != NULL) 
         free(list);
     
     char *body = strdup(str);
@@ -144,9 +144,10 @@ int get_words(const char *str, char ***list) {
         if (token == NULL) 
             break;
         da_str_push(&str_arr, token);
+        body = NULL;
     }
+
     *list = str_arr.list;
     
-    free(body);
     return str_arr.size;
 }
