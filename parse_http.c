@@ -7,8 +7,10 @@
 #include <stdlib.h>
 
 int is_end(const char *s) {
-    if (strlen(s) != 1) return 0;
-    if (s[0] == '\xd') return 1;
+    if (strlen(s) != 1)
+        return 0;
+    if (s[0] == '\xd')
+        return 1;
     return 0;
 }
 
@@ -27,20 +29,24 @@ bool parse_field(const char *line, map_t *m, Da_str *da) {
     int n_tokens = get_words_from_delim(line, ":\r", &tokens);
     char *val = NULL;
     if (n_tokens <= 1) {
-        printf ("n_tokens: %d | expected >= 2\n", n_tokens);
-        printf ("Failed on string `%s' \n", line);
+        printf("n_tokens: %d | expected >= 2\n", n_tokens);
+        printf("Failed on string `%s' \n", line);
         exit(1);
         return false;
     }
     if (n_tokens > 2) {
         // See here
-        concat_list(&tokens[1], n_tokens - 1, &val, ":"); //TODO Free the unused tokens in function    
-    } else val = tokens[1]; 
+        concat_list(&tokens[1], n_tokens - 1, &val,
+                    ":"); // TODO Free the unused tokens in function
+    } else
+        val = tokens[1];
     char *key = tokens[0];
     da_str_push(da, key);
 
+    str_shift_right(val, 1);
+
     if (map_set(m, key, val) == -1) {
-        printf ("map_set did fail\n");
+        printf("map_set did fail\n");
         return false;
     }
 
@@ -54,13 +60,13 @@ Req *http_parse_req(char **lines, size_t line_count) {
     Req *req = calloc(1, sizeof(Req));
 
     /*Parse Idents*/
-    //TODO
+    // TODO
     char **list = NULL;
     int n_words = get_words(idents, &list);
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {
-            printf("Token %02d: %s\n", i, list[i-1]);
+            printf("Token %02d: %s\n", i, list[i - 1]);
         }
         exit(1);
     }
@@ -74,7 +80,8 @@ Req *http_parse_req(char **lines, size_t line_count) {
 
     // //LOG
     // printf("The idents parsed succsess\n");
-    // printf("METHOD: %s\nURI: %s\nPROTOCOL: %s\n", req->method, req->uri, req->protocol);
+    // printf("METHOD: %s\nURI: %s\nPROTOCOL: %s\n", req->method, req->uri,
+    // req->protocol);
 
     /*Parse Fields*/
     Da_str *keys = calloc(1, sizeof(Da_str));
@@ -84,7 +91,8 @@ Req *http_parse_req(char **lines, size_t line_count) {
         if (is_end(lines[i])) {
             break;
         }
-        if (!parse_field(lines[i], fields, keys)) return NULL;
+        if (!parse_field(lines[i], fields, keys))
+            return NULL;
     }
 
     /*Parse Body*/
@@ -92,7 +100,7 @@ Req *http_parse_req(char **lines, size_t line_count) {
     concat_list(lines + i + 1, line_count - i - 1, &body, " ");
 
     req->body = body;
-    req->fields = (struct fields) {
+    req->fields = (struct fields){
         .fields = fields,
         .keys = keys,
     };

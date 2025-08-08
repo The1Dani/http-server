@@ -5,17 +5,15 @@
 #include "map.h"
 
 /**
- * contains the value by which the map is 
- * to be increased by when resizing. This 
+ * contains the value by which the map is
+ * to be increased by when resizing. This
  */
 #define CAPACITY_MULTIPLIER 2
 
 /**
  * list_free frees the memory used for the nodes.
  */
-static void
-list_free(struct node *n) 
-{
+static void list_free(struct node *n) {
     if (!n) {
         return;
     }
@@ -28,30 +26,27 @@ list_free(struct node *n)
     free(n);
 }
 
-map_t*
-map_new(const unsigned int size)
-{
+map_t *map_new(const unsigned int size) {
     map_t *m = malloc(sizeof(map_t));
     if (!m) {
         return NULL;
     }
     memset(m, 0, sizeof(map_t));
     if (size == 0) {
-        m->cap = DEFAULT_SIZE;    
+        m->cap = DEFAULT_SIZE;
     } else {
         m->cap = size;
     }
     m->len = 0;
-    m->list = malloc(sizeof(struct node*)*m->cap);
-    memset(m->list, 0, sizeof(struct node*)*m->cap);
+    m->list = malloc(sizeof(struct node *) * m->cap);
+    memset(m->list, 0, sizeof(struct node *) * m->cap);
     for (int i = 0; i < m->cap; i++) {
         m->list[i] = NULL;
     }
     return m;
 }
 
-void
-map_free(map_t *m) {
+void map_free(map_t *m) {
     if (!m) {
         return;
     }
@@ -65,9 +60,7 @@ map_free(map_t *m) {
  * hash hashes the given string to find which
  * bucket it will be placed in.
  */
-static int
-hash(map_t *m, char *key)
-{
+static int hash(map_t *m, char *key) {
     int sum = 0;
     for (int i = 0; i < strlen(key); i++) {
         sum += key[i];
@@ -75,9 +68,7 @@ hash(map_t *m, char *key)
     return sum % m->cap;
 }
 
-void*
-map_get(map_t *m, char *key)
-{
+void *map_get(map_t *m, char *key) {
     int pos = hash(m, key);
     struct node *list = m->list[pos];
     struct node *temp = list;
@@ -91,12 +82,10 @@ map_get(map_t *m, char *key)
 }
 
 /**
- * map_resize will resize the given map with the 
- * new capacity and reinsert the data. 
+ * map_resize will resize the given map with the
+ * new capacity and reinsert the data.
  */
-static int
-map_resize(map_t *m, int new_cap) 
-{
+static int map_resize(map_t *m, int new_cap) {
     map_t *nm = map_new(new_cap);
     if (!nm) {
         return -1;
@@ -119,27 +108,25 @@ map_resize(map_t *m, int new_cap)
     return 0;
 }
 
-int
-map_set(map_t *m, char *key, void *val)
-{
+int map_set(map_t *m, char *key, void *val) {
     if (m->len == m->cap) {
-        if (map_resize(m, m->cap*CAPACITY_MULTIPLIER) == -1) {
+        if (map_resize(m, m->cap * CAPACITY_MULTIPLIER) == -1) {
             return -1;
         }
     }
-    int pos = hash(m, key);              
-    struct node *list = m->list[pos]; 
-    struct node *temp = list;                      
-    while (temp) {                 
+    int pos = hash(m, key);
+    struct node *list = m->list[pos];
+    struct node *temp = list;
+    while (temp) {
         if (strcmp(temp->key, key) == 0) {
             temp->val = val;
             return 0;
         }
         temp = temp->next;
     }
-    struct node *new = malloc(sizeof(struct node)); 
-    if (!new) {                                     
-        return -1;                                    
+    struct node *new = malloc(sizeof(struct node));
+    if (!new) {
+        return -1;
     }
     memset(new, 0, sizeof(struct node));
     new->key = strdup(key);
@@ -150,25 +137,22 @@ map_set(map_t *m, char *key, void *val)
     return 0;
 }
 
-void
-map_del(map_t *m, char *key) {
+void map_del(map_t *m, char *key) {
     int pos = hash(m, key);
     struct node **n = &m->list[pos];
     while (*n) {
-        struct node *temp = *n; 
+        struct node *temp = *n;
         if (strcmp(temp->key, key) == 0) {
             *n = temp->next;
             break;
         } else {
             temp = (*n)->next;
         }
-    }  
+    }
     m->len--;
 }
 
-int 
-map_len(map_t *m) 
-{
+int map_len(map_t *m) {
     int items = 0;
     for (int i = 0; i < m->cap; i++) {
         if (!m->list[i]) {

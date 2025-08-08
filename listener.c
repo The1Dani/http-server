@@ -1,16 +1,16 @@
+#include "da.h"
+#include "parse_http.h"
+#include "req_handle.c"
+#include "simple_lexer.h"
 #include <arpa/inet.h>
 #include <asm-generic/errno-base.h>
 #include <netinet/in.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <string.h>
-#include "simple_lexer.h"
-#include "da.h"
-#include "parse_http.h"
-#include "req_handle.c"
 
 typedef struct sockaddr sockaddr;
 
@@ -32,18 +32,18 @@ int get_soc_str(char **buff, int connfd) {
     int n_chunk = 1;
     int n;
     char t_buff[BUFF_SIZE];
-    
-    while((n = read(connfd, t_buff, sizeof(t_buff))) == BUFF_SIZE) {
+
+    while ((n = read(connfd, t_buff, sizeof(t_buff))) == BUFF_SIZE) {
         *buff = realloc(*buff, sizeof(char) * BUFF_SIZE * n_chunk);
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
         n_chunk++;
     }
 
-    int str_lenght = (n_chunk - 1) * BUFF_SIZE + n;       
+    int str_lenght = (n_chunk - 1) * BUFF_SIZE + n;
 
-    if ( n == 0 ) {
+    if (n == 0) {
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
-    } else if ( n != -1 ){
+    } else if (n != -1) {
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
     } else {
@@ -51,7 +51,6 @@ int get_soc_str(char **buff, int connfd) {
     }
     (*buff)[str_lenght] = '\0';
     return str_lenght;
-
 }
 
 void http_send_resp_ok(int connfd) {
@@ -60,32 +59,34 @@ void http_send_resp_ok(int connfd) {
 }
 
 void echo_message(int connfd) {
-    
+
     char *buff = NULL;
-    get_soc_str(&buff, connfd); 
+    get_soc_str(&buff, connfd);
     Lexer lexer = {0};
     Lexer *lex = &lexer;
     lex->src = buff;
     Da_str da = da_str_new();
 
     int at = 0;
-    for(;;){    
+    for (;;) {
         lex_get_line(lex);
-        if (lex->status != LEXER_SUCCSESS) break;    
+        if (lex->status != LEXER_SUCCSESS)
+            break;
         char *line = lex->str;
-        da_str_push(&da, strdup(line)); //!Memory leak (free strings and array)
-        printf(ESC GREEN"Message:"ESC_CLOSE" %s\n", line);
+        da_str_push(&da, strdup(line)); //! Memory leak (free strings and array)
+        printf(ESC GREEN "Message:" ESC_CLOSE " %s\n", line);
     }
-    if (buff == NULL) exit(1);
+    if (buff == NULL)
+        exit(1);
     // printf(ESC RED"Message_Buf:"ESC_CLOSE" %s", buff);
 
-    Req * req = http_parse_req(da.list, da.size);
+    Req *req = http_parse_req(da.list, da.size);
 
     if (req == NULL) {
         exit(3);
     }
 
-    req_handler(req); //Still going
+    req_handler(req);
 
     http_send_resp_ok(connfd);
 
@@ -93,13 +94,12 @@ void echo_message(int connfd) {
     free(buff);
 }
 
-
 int main() {
 
     int sockfd, connfd;
     struct sockaddr_in servaddr = {0};
 
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1){
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == -1) {
         printf("Socket could not be created!\n");
         exit(1);
     }
@@ -107,7 +107,7 @@ int main() {
 
     /*To reuse address*/
     /**
-     * TODO Read about setsockopt  
+     * TODO Read about setsockopt
      */
     int opt = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
@@ -122,9 +122,10 @@ int main() {
         .sin_addr = inet_addr(IP),
     };
 
-    if ((bind(sockfd, (sockaddr*)&servaddr, sizeof(servaddr))) != 0 ) {
-        printf("Socket failed to bind probably there is another bind on the same port!\n");
-        clean_and_exit(sockfd, 1);        
+    if ((bind(sockfd, (sockaddr *)&servaddr, sizeof(servaddr))) != 0) {
+        printf("Socket failed to bind probably there is another bind on the "
+               "same port!\n");
+        clean_and_exit(sockfd, 1);
     }
     printf("Socket bind successfull!\n");
 
@@ -132,9 +133,8 @@ int main() {
         printf("Server listen failed!\n");
     }
 
-    
     for (;;) {
-        
+
         connfd = accept(sockfd, NULL, NULL);
         if (connfd < 0) {
             printf("Connection to the client failed!\n");
@@ -142,9 +142,7 @@ int main() {
         }
 
         echo_message(connfd);
-
     }
 
     return 0;
-
 }

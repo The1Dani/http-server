@@ -7,7 +7,7 @@
 #define DEFAULT_SIZE 16
 
 /**
- * returned when creating a new map and the provided 
+ * returned when creating a new map and the provided
  * size is smaller than the defined default.
  */
 #define ERR_SMALLER_THAN_DEFAULT 2
@@ -23,20 +23,20 @@ struct node {
 };
 
 /**
- * map_t contains an array of nodes with a length 
+ * map_t contains an array of nodes with a length
  * and a capacity.
  */
 typedef struct {
     int len;
     int cap;
     struct node **list;
-} map_t;                  
+} map_t;
 
 /**
  * map_new creates a new pointer with default values
  * set for a new map. This will need to be freed
  * by the caller. If malloc(3) fails, an error will
- * be returned indicating no memory was able to be 
+ * be returned indicating no memory was able to be
  * allocated.
  */
 map_t *map_new(const unsigned int size);
@@ -52,13 +52,13 @@ void map_free(map_t *m);
 void *map_get(map_t *m, char *key);
 
 /**
- * map_set takes a key and a value and sets them 
+ * map_set takes a key and a value and sets them
  * in the map.
  */
 int map_set(map_t *m, char *key, void *val);
 
 /**
- * map_del removes an entry the given key and value 
+ * map_del removes an entry the given key and value
  * from the map.
  */
 void map_del(map_t *m, char *key);

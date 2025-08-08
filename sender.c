@@ -1,7 +1,7 @@
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -17,29 +17,22 @@ typedef struct {
     struct sockaddr_in addr;
 } Context;
 
-void add_newline(char *buff, const char *txt){
-    sprintf(buff, "%s\n", txt); 
-}
+void add_newline(char *buff, const char *txt) { sprintf(buff, "%s\n", txt); }
 
 void say_hello(Context ctx) {
-    char buff[MAX] = {0}; 
+    char buff[MAX] = {0};
     add_newline(buff, ctx.text);
     write(ctx.sockfd, buff, strlen(buff));
 }
-
 
 void clean_and_exit(Context ctx, int status) {
     close(ctx.sockfd);
     exit(status);
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv) {
 
-
-    Context ctx = {
-        .addr = {0}
-    };
-
+    Context ctx = {.addr = {0}};
 
     if ((ctx.sockfd = socket(AF_INET, SOCK_STREAM, 6)) == -1) {
         printf("Could not bind to socket!\n");
@@ -54,20 +47,20 @@ int main(int argc, char **argv){
         .sin_port = htons(PORT),
     };
 
-    if(connect(ctx.sockfd, (struct sockaddr*)&ctx.addr, sizeof(ctx.addr)) != 0) {
+    if (connect(ctx.sockfd, (struct sockaddr *)&ctx.addr, sizeof(ctx.addr)) !=
+        0) {
         printf("connection has failed!\n");
         clean_and_exit(ctx, 1);
-    
     }
 
     if (argc <= 1) {
-        printf("Sending default text message\n"DEFAULT_TEXT);
-        ctx.text = DEFAULT_TEXT;    
+        printf("Sending default text message\n" DEFAULT_TEXT);
+        ctx.text = DEFAULT_TEXT;
     } else {
         printf("Sending...\n%s\n", argv[1]);
-        ctx.text = argv[1];        
-    } 
-    
+        ctx.text = argv[1];
+    }
+
     say_hello(ctx);
 
     clean_and_exit(ctx, 0);

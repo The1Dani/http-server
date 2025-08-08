@@ -30,3 +30,6 @@ $(build_folder)/%.o: %.c %.h
 
 clean:
 	rm -rf $(build_folder)/*
+
+count:
+	cloc --exclude-dir='external' .

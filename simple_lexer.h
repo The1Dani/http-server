@@ -1,10 +1,10 @@
 #ifndef SIMP_LEX
 #define SIMP_LEX
 
+#include "da.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
-#include "da.h"
 
 #define ESC "\x1b"
 #define RED "[31m"
@@ -22,12 +22,12 @@ enum {
 typedef struct {
     // The main str
     const char *src;
-    size_t cur;    
-    
-    //The resulting str
-    char *str;    
+    size_t cur;
 
-    //The status of the last func
+    // The resulting str
+    char *str;
+
+    // The status of the last func
     int status;
 } Lexer;
 
@@ -45,7 +45,9 @@ int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
 
-void concat_list(char**list, int size, char** dest, const char *sep);
+void concat_list(char **list, int size, char **dest, const char *sep);
+
+void str_shift_right(char *str, unsigned int amount);
 
 /*It consumes all whitespace till the next word start*/
 int get_word_len(Lexer *len);
