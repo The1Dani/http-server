@@ -1,6 +1,7 @@
 #include "simple_lexer.h"
 #include "da.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -157,7 +158,7 @@ int get_words(const char *str, char ***list) {
     return get_words_from_delim(str, WHITE_SPACE, list);
 }
 
-void concat_list(char**list, int size, char** dest) {
+void concat_list(char** list, int size, char** dest, const char *sep) {
     
     if (*dest != NULL) {
         return;
@@ -165,13 +166,9 @@ void concat_list(char**list, int size, char** dest) {
     char *dst = *dest;
 
     dst = strdup(list[0]);
-    dst = realloc(dst, strlen(dst) + 2);
-    strncat(dst, ":", 2);
-
     for (int i = 1; i < size; i++) {
-        dst = realloc(dst, sizeof(char *) * (strlen(dst) + strlen(list[i]) + 2));
-        strncat(dst, ":", 2);
-        strncat(dst, list[i], (strlen(dst) + strlen(list[i]) + 1));
+        sprintf( dst, "%s%s%s", dst, sep,  list[i]);
     }
 
+    *dest = dst;
 }

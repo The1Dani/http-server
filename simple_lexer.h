@@ -45,7 +45,7 @@ int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
 
-void concat_list(char**list, int size, char** dest);
+void concat_list(char**list, int size, char** dest, const char *sep);
 
 /*It consumes all whitespace till the next word start*/
 int get_word_len(Lexer *len);

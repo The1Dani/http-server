@@ -10,6 +10,7 @@
 #include "simple_lexer.h"
 #include "da.h"
 #include "parse_http.h"
+#include "req_handle.c"
 
 typedef struct sockaddr sockaddr;
 
@@ -78,7 +79,13 @@ void echo_message(int connfd) {
     if (buff == NULL) exit(1);
     // printf(ESC RED"Message_Buf:"ESC_CLOSE" %s", buff);
 
-    http_parse_req(da.list, da.size);
+    Req * req = http_parse_req(da.list, da.size);
+
+    if (req == NULL) {
+        exit(3);
+    }
+
+    req_handler(req); //Still going
 
     http_send_resp_ok(connfd);
 

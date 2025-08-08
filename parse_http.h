@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "da.h"
 #include "external/map.h"
 #include "simple_lexer.h"
 #include <stdbool.h>
@@ -12,14 +13,19 @@
 #define HTTP_STATUS_OK "200"
 #define RESP_OK SUPPORTED_PROTOCOL" " HTTP_STATUS_OK " OK\r\n" 
 
+struct fields {
+    Da_str *keys;
+    map_t *fields;
+};
+
 typedef struct {
 
     const char* method;
     const char* uri;
     const char* protocol;
-    map_t *fileds;
     const char* body;
-
+    struct fields fields;
+    
 } Req;
 
 
