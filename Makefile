@@ -23,7 +23,7 @@ test: lexer-tests.c $(obj_folder)
 
 
 $(build_folder)/%_ext.o: $(externals_folder)/%.c $(externals_folder)/%.h
-	gcc -c $< -o $@
+	gcc -g -c $< -o $@
 
 $(build_folder)/%.o: %.c %.h
 	gcc -g -c $< -o $@
@@ -33,3 +33,6 @@ clean:
 
 count:
 	cloc --exclude-dir='external' .
+
+valgrind: all
+	valgrind -s --leak-check=full ./build/listener
