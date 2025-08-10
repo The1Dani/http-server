@@ -54,4 +54,6 @@ int get_word_len(Lexer *len);
 
 char *paint_str(const char *str, const char *color);
 
+void free_str_list(char **li, size_t len);
+
 #endif

@@ -28,6 +28,9 @@ bool parse_field(const char *line, map_t *m, Da_str *da) {
     char **tokens = NULL;
     int n_tokens = get_words_from_delim(line, ":\r", &tokens);
     char *val = NULL;
+
+    bool is_alloced_sep = false;
+
     if (n_tokens <= 1) {
         printf("n_tokens: %d | expected >= 2\n", n_tokens);
         printf("Failed on string `%s' \n", line);
@@ -38,17 +41,24 @@ bool parse_field(const char *line, map_t *m, Da_str *da) {
         // See here
         concat_list(&tokens[1], n_tokens - 1, &val,
                     ":"); // TODO Free the unused tokens in function
+        is_alloced_sep = true;
     } else
         val = tokens[1];
     char *key = tokens[0];
-    da_str_push(da, key);
+    da_str_push(da, strdup(key));
 
     str_shift_right(val, 1);
 
-    if (map_set(m, key, val) == -1) {
+    if (map_set(m, key, strdup(val)) == -1) {
         printf("map_set did fail\n");
         return false;
     }
+
+    if (is_alloced_sep)
+        free(val);
+
+    free_str_list(tokens, n_tokens);
+    free(tokens);
 
     return true;
 }
@@ -70,9 +80,12 @@ Req *http_parse_req(char **lines, size_t line_count) {
         }
         exit(1);
     }
-    req->method = list[0];
-    req->uri = list[1];
-    req->protocol = list[2];
+    req->method = strdup(list[0]);
+    req->uri = strdup(list[1]);
+    req->protocol = strdup(list[2]);
+
+    free_str_list(list, n_words);
+    free(list);
 
     if (strcmp(req->protocol, SUPPORTED_PROTOCOL)) {
         printf("Unsupported Protocol %s\n", req->protocol);
@@ -106,4 +119,24 @@ Req *http_parse_req(char **lines, size_t line_count) {
     };
 
     return req;
+}
+
+void req_free(Req *req) {
+
+    free((void *)req->method);
+    free((void *)req->uri);
+    free((void *)req->protocol);
+    free((void *)req->body);
+
+    for (size_t i = 0; i < req->fields.keys->size; i++) {
+        char *key = req->fields.keys->list[i];
+        void *val = map_get(req->fields.fields, key);
+        free(val);
+    }
+
+    map_ffree(req->fields.fields, req->fields.keys->list, req->fields.keys->size);
+    free_str_list(req->fields.keys->list, req->fields.keys->size);
+    da_str_destroy(*req->fields.keys);
+    free(req->fields.keys);
+    free(req);
 }

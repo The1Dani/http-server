@@ -138,6 +138,7 @@ int get_words_from_delim(const char *str, const char *delim, char ***list) {
         free(list);
 
     char *body = strdup(str);
+    char *_body = body;
 
     char *token = NULL;
     char *saveptr = NULL;
@@ -148,11 +149,12 @@ int get_words_from_delim(const char *str, const char *delim, char ***list) {
         token = strtok_r(body, delim, &saveptr);
         if (token == NULL)
             break;
-        da_str_push(&str_arr, token);
+        da_str_push(&str_arr, strdup(token));
         body = NULL;
     }
 
     *list = str_arr.list;
+    free(_body);
 
     return str_arr.size;
 }
@@ -198,4 +200,9 @@ char *paint_str(const char *str, const char *color) {
         return NULL;
     sprintf(s, ESC"%s%s"ESC_CLOSE, color, str);
     return s;
+}
+
+void free_str_list(char **li, size_t len) {
+    for (size_t i = 0; i < len; i++) 
+        free(li[i]);
 }

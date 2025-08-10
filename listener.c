@@ -73,12 +73,13 @@ void echo_message(int connfd) {
         if (lex->status != LEXER_SUCCSESS)
             break;
         char *line = lex->str;
-        da_str_push(&da, strdup(line)); //! Memory leak (free strings and array)
-        printf(ESC GREEN "Message:" ESC_CLOSE " %s\n", line);
+        da_str_push(&da, strdup(line)); 
+        char *msg_str = paint_str("Message:", GREEN);
+        printf("%s %s\n", msg_str, line);
+        free(msg_str);
     }
     if (buff == NULL)
         exit(1);
-    // printf(ESC RED"Message_Buf:"ESC_CLOSE" %s", buff);
 
     Req *req = http_parse_req(da.list, da.size);
 
@@ -90,6 +91,9 @@ void echo_message(int connfd) {
 
     http_send_resp_ok(connfd);
 
+    req_free(req);
+    free_str_list(da.list, da.size);
+    da_str_destroy(da);
     lex_destroy(lex);
     free(buff);
 }
