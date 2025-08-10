@@ -1,4 +1,5 @@
 // #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,6 +10,8 @@
  * to be increased by when resizing. This
  */
 #define CAPACITY_MULTIPLIER 2
+
+static int hash(map_t *m, char *key);
 
 /**
  * list_free frees the memory used for the nodes.
@@ -46,12 +49,37 @@ map_t *map_new(const unsigned int size) {
     return m;
 }
 
+/**
+ * Also frees the memmory for allocated strings;
+ */
+void map_ffree(map_t *m, char **keys, unsigned int keys_len) {
+
+    for (size_t i = 0; i < keys_len; i++) {
+        int pos = hash(m, keys[i]);
+        struct node *list = m->list[pos];
+        struct node *temp = list;
+        while (temp) {
+            if (strcmp(temp->key, keys[i]) == 0) {
+                free(temp->key);
+                break;
+            }
+            temp = temp->next;
+        }
+    }
+
+    map_free(m);
+}
+
 void map_free(map_t *m) {
+
     if (!m) {
         return;
     }
     if (m->list) {
-        list_free(*m->list);
+        for (size_t i = 0; i < m->cap; i++) {
+            list_free(m->list[i]);
+        }
+        free(m->list);
     }
     free(m);
 }
@@ -143,6 +171,7 @@ void map_del(map_t *m, char *key) {
     while (*n) {
         struct node *temp = *n;
         if (strcmp(temp->key, key) == 0) {
+            free(temp->key);
             *n = temp->next;
             break;
         } else {

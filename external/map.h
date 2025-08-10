@@ -42,6 +42,11 @@ typedef struct {
 map_t *map_new(const unsigned int size);
 
 /**
+ * Also frees the memmory for allocated strings;
+ */
+void map_ffree(map_t *m, char **keys, unsigned int keys_len);
+
+/**
  * map_free frees the memory used by the given pointer.
  */
 void map_free(map_t *m);
