@@ -185,3 +185,17 @@ void concat_list(char **list, int size, char **dest, const char *sep) {
 void str_shift_right(char *str, unsigned int amount) {
     memmove(str, str + amount, strlen(str) - amount + 1);
 }
+
+char *paint_str(const char *str, const char *color) {
+    if (!str || !color) {
+        return NULL;
+    }
+    
+    int seq_len = 5;
+    int color_len = (int)strlen(color);
+    char *s = calloc(1, seq_len + color_len + strlen(str) + 1);
+    if (s == NULL) 
+        return NULL;
+    sprintf(s, ESC"%s%s"ESC_CLOSE, color, str);
+    return s;
+}

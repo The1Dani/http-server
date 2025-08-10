@@ -52,4 +52,6 @@ void str_shift_right(char *str, unsigned int amount);
 /*It consumes all whitespace till the next word start*/
 int get_word_len(Lexer *len);
 
+char *paint_str(const char *str, const char *color);
+
 #endif
