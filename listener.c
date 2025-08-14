@@ -3,9 +3,7 @@
 #include "req_handle.c"
 #include "simple_lexer.h"
 #include <arpa/inet.h>
-#include <asm-generic/errno-base.h>
 #include <netinet/in.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
