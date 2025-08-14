@@ -37,10 +37,13 @@ void log_http_req(Req *req) {
            method, uri, proto, body);
 
     map_t *q_params = map_new(DEFAULT_SIZE);
-    char *url = get_file_path(uri, q_params);
+    Da_str key_list;
+    char *url = get_file_path(uri, q_params, &key_list);
     printf("URL: '%s`\n", url);
 
     print_map(req->fields);
+    printf("Q_PARAMS\n");
+    print_map((struct fields){.fields = q_params, .keys = &key_list});
 }
 
 void req_handler(Req *req) { log_http_req(req); }

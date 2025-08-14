@@ -2,8 +2,8 @@
 #include "da.h"
 #include "external/map.h"
 #include "simple_lexer.h"
+#include "url_escape.h"
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -144,10 +144,8 @@ void req_free(Req *req) {
     free(req);
 }
 
-char *escape_uri(const char *uri) { return NULL; }
-
 /* Replaces '?' with '\0' */
-int get_querry_params(char *uri, map_t *m) {
+int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
     char *q_params = NULL;
 
@@ -187,26 +185,33 @@ int get_querry_params(char *uri, map_t *m) {
             key = param_pair[0];
             val = param_pair[1];
         }
-        map_set(m, key, val);
+
+        char *decoded_key = decode_url(key);
+        char *decoded_val = decode_url(val);
         free(key);
+        free(val);
+
+        map_set(m, decoded_key, decoded_val);
+        da_str_push(key_list, decoded_key);
     }
 
     free_str_list(param_pairs, n_params);
     return n_params;
 }
 
-char *get_file_path(const char *_uri, map_t *m) {
+char *get_file_path(const char *_uri, map_t *m, Da_str *_key_list) {
 
     if (_uri == NULL) {
         return NULL;
     }
-    
-    char *uri = strdup(uri);
 
-    get_querry_params(uri, m);
+    char *uri = strdup(_uri);
+    Da_str key_list = da_str_new();
 
-    char *escaped_uri = escape_uri(uri);
+    get_querry_params(uri, m, &key_list);
 
-    free(uri);
-    return NULL;
+    decode_url(uri);
+
+    *_key_list = key_list;
+    return uri;
 }
