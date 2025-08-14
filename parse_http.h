@@ -14,7 +14,7 @@
 #define RESP_OK                                                                \
     SUPPORTED_PROTOCOL " " HTTP_STATUS_OK " OK\r\n"                            \
                        "Content-Type: text/html\r\n\r\n"                       \
-                       "<h1>elifusu ck sevyrm eklfbeıaslgfvbhewapşo</h1>"
+                       "<h1>elifusu çk sevyrm :33 </h1>"
 
 struct fields {
     Da_str *keys;
