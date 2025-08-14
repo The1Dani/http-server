@@ -67,13 +67,12 @@ void echo_message(int connfd) {
     lex->src = buff;
     Da_str da = da_str_new();
 
-    int at = 0;
     for (;;) {
         lex_get_line(lex);
         if (lex->status != LEXER_SUCCSESS)
             break;
         char *line = lex->str;
-        da_str_push(&da, strdup(line)); 
+        da_str_push(&da, strdup(line));
         char *msg_str = paint_str("Message:", GREEN);
         printf("%s %s\n", msg_str, line);
         free(msg_str);
@@ -123,7 +122,7 @@ int main() {
     servaddr = (struct sockaddr_in){
         .sin_family = AF_INET,
         .sin_port = htons(PORT),
-        .sin_addr = inet_addr(IP),
+        .sin_addr = {inet_addr(IP)},
     };
 
     if ((bind(sockfd, (sockaddr *)&servaddr, sizeof(servaddr))) != 0) {

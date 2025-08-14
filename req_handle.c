@@ -1,6 +1,7 @@
 #include "da.h"
 #include "external/map.h"
 #include "parse_http.h"
+#include <stddef.h>
 
 struct _node {
     char *key;
@@ -16,7 +17,7 @@ void print_map(struct fields fields) {
     map_t *m = fields.fields;
     Da_str *keys = fields.keys;
 
-    for (int i = 0; i < keys->size; i++) {
+    for (size_t i = 0; i < keys->size; i++) {
         char *key = keys->list[i];
         print_node((struct _node){.key = key, .val = (char *)map_get(m, key)});
     }
@@ -34,6 +35,10 @@ void log_http_req(Req *req) {
            "PROTOCOL: %s\n"
            "BODY: %s\n\n",
            method, uri, proto, body);
+
+    map_t *q_params = map_new(DEFAULT_SIZE);
+    char *url = get_file_path(uri, q_params);
+    printf("URL: '%s`\n", url);
 
     print_map(req->fields);
 }

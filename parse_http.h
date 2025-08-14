@@ -33,6 +33,8 @@ typedef struct {
 
 Req *http_parse_req(char **lines, size_t line_count);
 
-void req_free(Req* req);
+void req_free(Req *req);
+
+char *get_file_path(const char *uri, map_t *m);
 
 #endif

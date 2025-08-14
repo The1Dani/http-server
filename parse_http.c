@@ -4,7 +4,9 @@
 #include "simple_lexer.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int is_end(const char *s) {
     if (strlen(s) != 1)
@@ -134,9 +136,77 @@ void req_free(Req *req) {
         free(val);
     }
 
-    map_ffree(req->fields.fields, req->fields.keys->list, req->fields.keys->size);
+    map_ffree(req->fields.fields, req->fields.keys->list,
+              req->fields.keys->size);
     free_str_list(req->fields.keys->list, req->fields.keys->size);
     da_str_destroy(*req->fields.keys);
     free(req->fields.keys);
     free(req);
+}
+
+char *escape_uri(const char *uri) { return NULL; }
+
+/* Replaces '?' with '\0' */
+int get_querry_params(char *uri, map_t *m) {
+
+    char *q_params = NULL;
+
+    if (!(q_params = strchr(uri, '?'))) {
+        return 0;
+    }
+
+    q_params[0] = '\0';
+    q_params += 1; // GET TO THE PARAMETERS "?asdasd" -> "asdasd"
+
+    char **param_pairs = NULL;
+    int n_params = get_words_from_delim(q_params, "&", &param_pairs);
+
+    if (param_pairs == NULL) {
+        perror("PARAM_PAIRS IS NULL");
+        return -1;
+    }
+
+    /*We dont free the vals bc map stores raw pointers*/
+    /*The keys are stored as copied strings*/
+    for (int i = 0; i < n_params; i++) {
+        char **param_pair = NULL;
+        char *key = NULL;
+        char *val = NULL;
+
+        int n_pair = get_words_from_delim(param_pairs[i], "=", &param_pair);
+
+        if (n_pair <= 0) { // DONT KNOW WHAT TODO
+            continue;
+        } else if (n_pair == 1) {
+            continue;
+        } else if (n_pair > 2) {
+            key = param_pair[0];
+            concat_list(param_pair + 1, n_pair - 1, &val, "=");
+            free_str_list(param_pair + 1, n_pair - 1);
+        } else {
+            key = param_pair[0];
+            val = param_pair[1];
+        }
+        map_set(m, key, val);
+        free(key);
+    }
+
+    free_str_list(param_pairs, n_params);
+    return n_params;
+}
+
+char *get_file_path(const char *_uri, map_t *m) {
+
+    if (_uri == NULL) {
+        return NULL;
+    }
+    
+    char *uri = strdup(uri);
+
+    get_querry_params(uri, m);
+
+    char *escaped_uri = escape_uri(uri);
+
+    free(uri);
+    return NULL;
 }

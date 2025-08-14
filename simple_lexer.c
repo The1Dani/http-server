@@ -79,8 +79,6 @@ int get_word_len(Lexer *lex) {
 
 void lex_get_word(Lexer *lex) {
 
-    size_t start = lex->cur;
-
     int w_len = get_word_len(lex);
     if (w_len == 0) {
         lex->status = LEXER_EOF;
@@ -136,6 +134,10 @@ int get_words_from_delim(const char *str, const char *delim, char ***list) {
 
     if (*list != NULL)
         free(list);
+
+    if (str == NULL) {
+        return 0;
+    }
 
     char *body = strdup(str);
     char *_body = body;
