@@ -1,7 +1,7 @@
 all: __build_folder sender listener
 
 build_folder = ./build
-obj = simple_lexer da parse_http
+obj = simple_lexer da parse_http url_escape
 externals_folder = ./external
 externals = map
 obj_folder = $(foreach f,$(obj),$(build_folder)/$(f).o)

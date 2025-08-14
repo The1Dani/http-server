@@ -1,2 +1,3 @@
 # .clang-format
 IndentWidth: 4
+WhitespaceSensitiveMacros: [ELSE_IF_TOK_TO_ASCII]

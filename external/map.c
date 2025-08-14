@@ -74,7 +74,7 @@ void map_free(map_t *m) {
         return;
     }
     if (m->list) {
-        for (size_t i = 0; i < m->cap; i++) {
+        for (int i = 0; i < m->cap; i++) {
             list_free(m->list[i]);
         }
         free(m->list);
@@ -88,7 +88,7 @@ void map_free(map_t *m) {
  */
 static int hash(map_t *m, char *key) {
     int sum = 0;
-    for (int i = 0; i < strlen(key); i++) {
+    for (size_t i = 0; i < strlen(key); i++) {
         sum += key[i];
     }
     return sum % m->cap;
