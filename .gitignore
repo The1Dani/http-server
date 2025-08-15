@@ -1,5 +1,6 @@
-build/*
+build
 refs
 nob
 nob.old
 listener
+tests

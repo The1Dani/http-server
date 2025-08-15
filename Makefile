@@ -10,4 +10,4 @@ count:
 	cloc --exclude-dir='external,refs' --exclude-content='nob.h' .
 
 valgrind: all
-	valgrind -s --leak-check=full ./build/listener
+	valgrind -s --leak-check=full ./listener
