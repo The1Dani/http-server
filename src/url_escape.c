@@ -22,7 +22,6 @@ void replace_to_ascii(char *str, char *tok) {
     else if (str_equal(tok_name, tok)) {                                       \
         var_name = chr;                                                        \
     }
-    char *p_s = PERCENT_SPACE;
     char ch = '\0';
     if (str_equal(tok, PERCENT_SPACE)) {
         ch = ' ';

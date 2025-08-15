@@ -165,6 +165,20 @@ int get_words(const char *str, char ***list) {
     return get_words_from_delim(str, WHITE_SPACE, list);
 }
 
+void concat(char **dst, const char *src) {
+
+    if (!dst || !*dst || !src)
+        return;
+
+    char *dst_ = strdup(*dst);
+    dst_ = realloc(dst_, strlen(dst_) + strlen(src) + 1);
+    *dst = realloc(*dst, strlen(dst_) + strlen(src) + 1);
+
+    sprintf(*dst, "%s%s", dst_, src);
+
+    free(dst_);
+}
+
 void concat_list(char **list, int size, char **dest, const char *sep) {
 
     if (size <= 0) {
@@ -179,8 +193,10 @@ void concat_list(char **list, int size, char **dest, const char *sep) {
     int i = 1;
     dst = strdup(list[0]);
     for (; i < size; i++) {
-        dst = realloc(dst, strlen(dst) + strlen(sep) + strlen(list[i]) + 1);
-        sprintf(dst, "%s%s%s", dst, sep, list[i]);
+        concat(&dst, sep);
+        concat(&dst, list[i]);
+        // dst = realloc(dst, strlen(dst) + strlen(sep) + strlen(list[i]) + 1);
+        // sprintf(dst, "%s%s%s", dst, sep, list[i]);
     }
 
     *dest = dst;
@@ -194,17 +210,17 @@ char *paint_str(const char *str, const char *color) {
     if (!str || !color) {
         return NULL;
     }
-    
+
     int seq_len = 5;
     int color_len = (int)strlen(color);
     char *s = calloc(1, seq_len + color_len + strlen(str) + 1);
-    if (s == NULL) 
+    if (s == NULL)
         return NULL;
-    sprintf(s, ESC"%s%s"ESC_CLOSE, color, str);
+    sprintf(s, ESC "%s%s" ESC_CLOSE, color, str);
     return s;
 }
 
 void free_str_list(char **li, size_t len) {
-    for (size_t i = 0; i < len; i++) 
+    for (size_t i = 0; i < len; i++)
         free(li[i]);
 }
