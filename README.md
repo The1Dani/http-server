@@ -2,7 +2,7 @@
 
 You need to have build-essentials
 ```bash
-make -B
+make && ./nob
 ```
 
 ## HOW TO RUN
