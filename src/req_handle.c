@@ -1,6 +1,7 @@
 #include "da.h"
 #include "external/map.h"
 #include "parse_http.h"
+#include "simple_lexer.h"
 #include <stddef.h>
 
 struct _node {
@@ -9,7 +10,7 @@ struct _node {
 };
 
 void print_node(struct _node n) {
-    printf("Node || key = %s || val = %s \n", n.key, (char *)n.val);
+    printf("Node || %s: %s \n", n.key, (char *)n.val);
 }
 
 void print_map(struct fields fields) {
@@ -42,8 +43,22 @@ void log_http_req(Req *req) {
     printf("URL: '%s`\n", url);
 
     print_map(req->fields);
-    printf("Q_PARAMS\n");
+
+    if (key_list.size != 0)
+        printf("Q_PARAMS\n");
+
     print_map((struct fields){.fields = q_params, .keys = &key_list});
+
+    free(url);
+
+    for (size_t i = 0; i < key_list.size; i++) {
+        char *key = key_list.list[i];
+        free(map_get(q_params, key));
+    }
+
+    map_ffree(q_params, key_list.list, key_list.size);
+    free_str_list(key_list.list, key_list.size);
+    da_str_destroy(key_list);
 }
 
 void req_handler(Req *req) { log_http_req(req); }

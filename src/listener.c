@@ -81,18 +81,19 @@ void echo_message(int connfd) {
     Req *req = http_parse_req(da.list, da.size);
 
     if (req == NULL) {
-        exit(3);
+       goto free_label;
     }
 
     req_handler(req);
 
     http_send_resp_ok(connfd);
 
-    req_free(req);
-    free_str_list(da.list, da.size);
-    da_str_destroy(da);
-    lex_destroy(lex);
-    free(buff);
+        req_free(req);
+    free_label:
+        free_str_list(da.list, da.size);
+        da_str_destroy(da);
+        lex_destroy(lex);
+        free(buff);
 }
 
 int main() {

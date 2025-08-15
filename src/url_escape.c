@@ -75,7 +75,7 @@ char *decode_url(char *_s) {
 
     nxt = go_next(s, tok);
     if (!nxt)
-        return s;
+        goto defer;
     replace_to_ascii(nxt, tok);
 
     bool done = nxt == NULL ? true : false;
@@ -88,6 +88,7 @@ char *decode_url(char *_s) {
         replace_to_ascii(nxt, tok);
     }
 
-    free(tok);
-    return s;
+    defer:
+        free(tok);
+        return s;
 }

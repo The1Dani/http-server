@@ -1,11 +1,14 @@
 #include <stdbool.h>
+#include <stdio.h>
 #define NOB_IMPLEMENTATION
 #define NOB_STRIP_PREFIX
 #include "nob.h"
+#include <stdarg.h>
 
 #define BUILD_FOLDER "build/"
 #define SRC_FOLDER "src/"
 #define EXTERNAL_FOLDER "src/external/"
+#define TEST_BUILD_FOLDER "tests/"
 
 #define objects_from_da(cmd, da, output_folder)                                \
     da_foreach(char *, obj, da) {                                              \
@@ -22,10 +25,12 @@ bool build_object(bool force, Nob_Cmd *cmd, const char *name,
                   const char *from) {
 
     const char *source = nob_temp_sprintf("%s%s.c", from, name);
+    const char *source_header = nob_temp_sprintf("%s%s.h", from, name);
     const char *output = nob_temp_sprintf(BUILD_FOLDER "%s.o", name);
-    ;
 
-    int rebuild_is_needed = nob_needs_rebuild1(output, source);
+    const char *inputs[] = {source, source_header};
+
+    int rebuild_is_needed = nob_needs_rebuild(output, inputs, 2);
     if (rebuild_is_needed < 0)
         return false;
 
@@ -42,6 +47,38 @@ bool build_object(bool force, Nob_Cmd *cmd, const char *name,
     return true;
 }
 
+bool build_exec(bool force, Nob_Cmd *cmd, const char *name, const char *from,
+                const char *to, int n_list, ...) {
+
+    va_list args;
+
+    const char *source = nob_temp_sprintf("%s%s.c", from, name);
+    const char *output = nob_temp_sprintf(BUILD_FOLDER "%s", name);
+
+    int rebuild_is_needed = nob_needs_rebuild1(output, source);
+    if (rebuild_is_needed < 0)
+        return false;
+
+    if (rebuild_is_needed || force) {
+        cmd_append(cmd, "gcc");
+        nob_cc_flags(cmd);
+        cmd_append(cmd, "-ggdb");
+
+        va_start(args, n_list);
+        for (int i = 0; i < n_list; i++) {
+            Strings *nxt_list = va_arg(args, Strings *);
+            objects_from_da(cmd, nxt_list, BUILD_FOLDER);
+        }
+        va_end(args);
+
+        nob_cc_output(cmd, nob_temp_sprintf("%s%s", to, name));
+        nob_cc_inputs(cmd, nob_temp_sprintf("%s%s.c", from, name));
+        return nob_cmd_run(cmd);
+    }
+
+    return true;
+}
+
 int main(int argc, char **argv) {
 
     NOB_GO_REBUILD_URSELF(argc, argv);
@@ -50,30 +87,34 @@ int main(int argc, char **argv) {
     Nob_Cmd cmd = {0};
     Strings objects = {0};
     Strings externals = {0};
+    Strings tests = {0};
     const char *object_names[] = {"simple_lexer", "da", "parse_http",
                                   "url_escape"};
     const char *external_names[] = {"map"};
+    const char *test_names[] = {"test01"};
 
     da_append_many(&objects, object_names, ARRAY_LEN(object_names));
     da_append_many(&externals, external_names, ARRAY_LEN(external_names));
+    da_append_many(&tests, test_names, ARRAY_LEN(test_names));
 
     da_foreach(char *, obj, &objects) {
-        if (!build_object(true, &cmd, *obj, SRC_FOLDER))
+        if (!build_object(false, &cmd, *obj, SRC_FOLDER))
             return 1;
     }
 
     da_foreach(char *, ext, &externals) {
-        if (!build_object(true, &cmd, *ext, EXTERNAL_FOLDER))
+        if (!build_object(false, &cmd, *ext, EXTERNAL_FOLDER))
             return 1;
     }
 
     /*Build final executable*/
-    cmd_append(&cmd, "gcc");
-    nob_cc_flags(&cmd);
-    objects_from_da(&cmd, &objects, BUILD_FOLDER);
-    objects_from_da(&cmd, &externals, BUILD_FOLDER);
-    nob_cc_output(&cmd, "listener");
-    nob_cc_inputs(&cmd, SRC_FOLDER "listener.c");
-    if (!nob_cmd_run(&cmd))
+    if (!build_exec(true, &cmd, "listener", SRC_FOLDER, "", 2, &objects,
+                    &externals))
         return 1;
+
+    da_foreach(char *, test, &tests) {
+        if (!build_exec(true, &cmd, *test, SRC_FOLDER "tests/",
+                        TEST_BUILD_FOLDER, 2, &objects, &externals))
+            return 1;
+    }
 }

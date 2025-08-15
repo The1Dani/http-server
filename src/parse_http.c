@@ -75,6 +75,7 @@ Req *http_parse_req(char **lines, size_t line_count) {
     // TODO
     char **list = NULL;
     int n_words = get_words(idents, &list);
+    if (n_words == 0) return NULL;
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {
@@ -161,6 +162,7 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
     if (param_pairs == NULL) {
         perror("PARAM_PAIRS IS NULL");
+        // Add frees here
         return -1;
     }
 
@@ -190,12 +192,15 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
         char *decoded_val = decode_url(val);
         free(key);
         free(val);
+        free(param_pair);
 
         map_set(m, decoded_key, decoded_val);
         da_str_push(key_list, decoded_key);
     }
 
     free_str_list(param_pairs, n_params);
+    free(param_pairs);
+
     return n_params;
 }
 
@@ -210,8 +215,9 @@ char *get_file_path(const char *_uri, map_t *m, Da_str *_key_list) {
 
     get_querry_params(uri, m, &key_list);
 
-    decode_url(uri);
+    char *url = decode_url(uri);
 
+    free(uri);
     *_key_list = key_list;
-    return uri;
+    return url;
 }
