@@ -9,6 +9,13 @@
 #define SRC_FOLDER "src/"
 #define EXTERNAL_FOLDER "src/external/"
 #define TEST_BUILD_FOLDER "tests/"
+#undef BUILD_OBJECTS_EVERYTIME
+
+#ifdef BUILD_OBJECTS_EVERYTIME
+    #define BUILD_OBJECTS 1
+#else
+    #define BUILD_OBJECTS 0
+#endif
 
 #define objects_from_da(cmd, da, output_folder)                                \
     da_foreach(char *, obj, da) {                                              \
@@ -20,6 +27,14 @@ typedef struct {
     size_t count;
     size_t capacity;
 } Strings;
+
+void flags_and_cc(Nob_Cmd *cmd) {
+    cmd_append(cmd, "gcc");
+    nob_cc_flags(cmd);
+    cmd_append(cmd, "-ggdb");
+    cmd_append(cmd, "-pedantic");
+    cmd_append(cmd, "-std=c23");
+}
 
 bool build_object(bool force, Nob_Cmd *cmd, const char *name,
                   const char *from) {
@@ -35,15 +50,13 @@ bool build_object(bool force, Nob_Cmd *cmd, const char *name,
         return false;
 
     if (rebuild_is_needed || force) {
-        cmd_append(cmd, "gcc");
-        nob_cc_flags(cmd);
-        cmd_append(cmd, "-ggdb");
+        flags_and_cc(cmd);
         cmd_append(cmd, "-c");
         nob_cc_output(cmd, output);
         nob_cc_inputs(cmd, source);
         return cmd_run(cmd);
     }
-
+    
     return true;
 }
 
@@ -60,9 +73,7 @@ bool build_exec(bool force, Nob_Cmd *cmd, const char *name, const char *from,
         return false;
 
     if (rebuild_is_needed || force) {
-        cmd_append(cmd, "gcc");
-        nob_cc_flags(cmd);
-        cmd_append(cmd, "-ggdb");
+        flags_and_cc(cmd);
 
         va_start(args, n_list);
         for (int i = 0; i < n_list; i++) {
@@ -98,12 +109,12 @@ int main(int argc, char **argv) {
     da_append_many(&tests, test_names, ARRAY_LEN(test_names));
 
     da_foreach(char *, obj, &objects) {
-        if (!build_object(false, &cmd, *obj, SRC_FOLDER))
+        if (!build_object(BUILD_OBJECTS, &cmd, *obj, SRC_FOLDER))
             return 1;
     }
 
     da_foreach(char *, ext, &externals) {
-        if (!build_object(false, &cmd, *ext, EXTERNAL_FOLDER))
+        if (!build_object(BUILD_OBJECTS, &cmd, *ext, EXTERNAL_FOLDER))
             return 1;
     }
 
