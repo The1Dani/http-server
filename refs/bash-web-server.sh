@@ -1,0 +1,317 @@
+#!/usr/bin/env bash
+#
+# Bash HTTP Server in Pure Bash.
+#
+# Watch how this was made on YouTube:
+# - https://youtu.be/L967hYylZuc
+#
+# Author: Dave Eddy <dave@daveeddy.com>
+# Date: July 08, 2025
+# License: MIT
+
+VERSION='v1.0.2'
+
+PORT=8080
+ADDRESS='0.0.0.0'
+DIR='.'
+
+read -d '' -r USAGE <<- EOF
+Usage: bash-web-server [-p port] [-b addr] [-d dir]
+
+An HTTP server in Pure Bash.
+
+Options
+  -b <addr>  Address to bind to, defaults to 0.0.0.0.
+  -d <dir>   Directory to serve, defaults to your current directory.
+  -h         Print this message and exit.
+  -p <port>  Port to bind to, defaults to 8080.
+  -v         Print the version number and exit.
+EOF
+
+fatal() {
+	echo '[fatal]' "$@" >&2
+	exit 1
+}
+
+mime-type() {
+	local f=$1
+	local bname=${f##*/}
+	local ext=${bname##*.}
+	[[ $bname == "$ext" ]] && ext=
+
+	case "$ext" in
+		html|htm) echo 'text/html';;
+		jpeg|jpg) echo 'image/jpeg';;
+		png) echo 'image/png';;
+		txt) echo 'text/plain';;
+		css) echo 'text/css';;
+		js) echo 'text/javascript';;
+		json) echo 'application/json';;
+		*) echo 'application/octet-stream';;
+	esac
+}
+
+html-encode() {
+	local s=$1
+
+	s=${s//&/\&amp;}
+	s=${s//</\&lt;}
+	s=${s//>/\&gt;}
+	s=${s//\"/\&quot;}
+	s=${s//\'/\&apos;}
+
+	echo "$s"
+}
+
+list-directory() {
+	local d=$1
+
+	shopt -s nullglob dotglob
+
+	echo '<!DOCTYPE html>'
+	echo '<html lang="en">'
+	echo '<head>'
+	echo '  <meta charset="utf-8">'
+	printf '  <title>Index of %s</title>\n' "$(html-encode "$d")"
+	echo '  <style>'
+	echo '  body {'
+	echo '    background-color: Canvas;'
+	echo '    color: CanvasText;'
+	echo '    color-scheme: light dark;'
+	echo '  }'
+	echo '  a, a:visited, a:active {'
+	echo '    text-decoration: none;'
+	echo '  }'
+	echo '  </style>'
+	echo '</head>'
+	echo '<body>'
+	echo '<h1>Directory Listing</h1>'
+	echo "<h2>Directory: $(html-encode "$d")</h2>"
+	echo '<hr>'
+	echo '<ul>'
+	local f
+	# loop directories first (to put at top of list)
+	for f in .. "$d"/*/; do
+		local bname=${f%/}
+		bname=${bname##*/}
+
+		local display_name="📁 $bname/"
+		printf '<li><a href="%s">%s</a></li>\n' \
+			"$(urlencode "$bname")" \
+			"$(html-encode "$display_name")"
+	done
+	# loop regular files next (non-directories)
+	for f in "$d"/*; do
+		[[ -f $f ]] || continue
+		local bname=${f##*/}
+
+		local display_name="📄 $bname"
+		printf '<li><a href="%s">%s</a></li>\n' \
+			"$(urlencode "$bname")" \
+			"$(html-encode "$display_name")"
+	done
+	echo '</ul>'
+	echo '<hr>'
+	echo '</body>'
+	echo '</html>'
+}
+
+urlencode() {
+	# Usage: urlencode "string"
+	local LC_ALL=C
+	for (( i = 0; i < ${#1}; i++ )); do
+		: "${1:i:1}"
+		case "$_" in
+			[a-zA-Z0-9.~_-])
+				printf '%s' "$_"
+				;;
+
+			*)
+				printf '%%%02X' "'$_"
+				;;
+		esac
+	done
+	printf '\n'
+}
+
+urldecode() {
+	# Usage: urldecode "string"
+	: "${1//+/ }"
+	printf '%b\n' "${_//%/\\x}"
+}
+
+normalize-path() {
+	local path=/$1
+
+	local parts
+	IFS='/' read -r -a parts <<< "$path"
+
+	local -a out=()
+	local part
+	for part in "${parts[@]}"; do
+		case "$part" in
+			'') ;; # ignore empty directories (multiple /)
+			'.') ;; # ignore current directory
+			'..') unset 'out[-1]' 2>/dev/null;;
+			*) out+=("$part");;
+		esac
+	done
+
+	local s
+	s=$(IFS=/; echo "${out[*]}")
+	echo "/$s"
+}
+
+parse-request() {
+	declare -gA REQ_INFO=()
+	declare -gA REQ_HEADERS=()
+
+	local state='status'
+	local line
+	while read -r line; do
+		line=${line%$'\r'}
+
+		case "$state" in
+			'status')
+				# parse the status line
+				# "GET /foo.txt HTTP/1.1"
+				local method path version
+				read -r method path version <<< "$line"
+				REQ_INFO[method]=$method
+				REQ_INFO[path]=$path
+				REQ_INFO[version]=$version
+				state='headers'
+				;;
+			'headers')
+				# parse the headers
+				if [[ -z $line ]]; then
+					# XXX this doesn't support body parsing
+					break
+				fi
+				local key value
+				IFS=: read -r key value <<< "$line"
+				key=${key,,}
+				value=${value# *}
+				REQ_HEADERS[$key]=$value
+				;;
+			'body')
+				fatal 'body parsing not supported'
+				;;
+		esac
+	done
+}
+
+process-request() {
+	local fd=$1
+
+	parse-request <&"$fd"
+
+	# validate the request
+	[[ ${REQ_INFO[version]} == 'HTTP/1.1' ]] \
+	    || fatal 'unsupported HTTP version'
+	[[ ${REQ_INFO[method]} == 'GET' ]] \
+	    || fatal 'unsupported HTTP method'
+	[[ ${REQ_INFO[path]} == /* ]] \
+	    || fatal 'path must be absolute'
+
+	echo "${REQ_INFO[method]} ${REQ_INFO[path]}"
+
+	# if we are here, we should reply to the caller
+	# "/././foo%20bar.txt?query=whatever"
+	local path="${REQ_INFO[path]}"
+
+	# "././foo%20bar.txt?query=whatever"
+	path=${path:1}
+
+	# "././foo%20bar.txt"
+	local query
+	IFS='?' read -r path query <<< "$path"
+
+	# "././foo bar.txt"
+	path=$(urldecode "$path")
+
+	# "/foo bar.txt"
+	path=$(normalize-path "$path")
+
+	# "foo bar.txt"
+	path=${path:1}
+
+	# handle empty path (root path)
+	path=${path:-.}
+
+	# try to serve an index page
+	local totry=(
+		"$path"
+		"$path/index.html"
+		"$path/index.htm"
+	)
+	local try file
+	for try in "${totry[@]}"; do
+		if [[ -f $try ]]; then
+			file=$try
+			break
+		fi
+	done
+
+	if [[ -n $file ]]; then
+		# a static file was found!
+		local mime
+		mime=$(mime-type "$file")
+
+		printf 'HTTP/1.1 200 OK\r\n' >&"$fd"
+		printf 'Content-Type: %s\r\n' "$mime" >&"$fd"
+		printf '\r\n' >&"$fd"
+		tee < "$file" >&"$fd"
+	elif [[ -d $path ]]; then
+		# redirect to /path/ if directory requested without trailing slash
+		if [[ ${REQ_INFO[path]} != */ ]]; then
+			printf 'HTTP/1.1 301 Moved Permanently\r\n' >&"$fd"
+			printf 'Location: %s/\r\n' "${REQ_INFO[path]}" >&"$fd"
+			printf '\r\n' >&"$fd"
+			return
+		fi
+
+		# try a directory listing
+		printf 'HTTP/1.1 200 OK\r\n' >&"$fd"
+		printf 'Content-Type: text/html; charset=utf-8\r\n' >&"$fd"
+		printf '\r\n' >&"$fd"
+		list-directory "$path" >&"$fd"
+	else
+		# nothing was found
+		printf 'HTTP/1.1 404 Not Found\r\n' >&"$fd"
+		printf '\r\n' >&"$fd"
+	fi
+}
+
+main() {
+	enable accept || fatal 'failed to load accept'
+	enable tee # fallback to POSIX tee if not loadable
+
+	local OPTIND OPTARG opt
+	while getopts 'b:hp:d:v' opt; do
+		case "$opt" in
+			b) ADDRESS=$OPTARG;;
+			p) PORT=$OPTARG;;
+			d) DIR=$OPTARG;;
+			h) echo "$USAGE"; exit 0;;
+			v) echo "$VERSION"; exit 0;;
+			*) echo "$USAGE" >&2; exit 2;;
+		esac
+	done
+
+	cd "$DIR" || fatal "failed to move to $DIR"
+
+	echo "listening on http://$ADDRESS:$PORT"
+	echo "serving out of $PWD"
+
+	local fd ip
+	while true; do
+		accept -b "$ADDRESS" -v fd -r ip "$PORT" \
+		    || fatal 'failed to read socket'
+		process-request "$fd" &
+
+		exec {fd}>&-
+	done
+}
+
+main "$@"

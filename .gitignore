@@ -1,6 +1,7 @@
 build
-refs
+^refs
 nob
 nob.old
 listener
-tests
+tests/*
+^tests/*.c
