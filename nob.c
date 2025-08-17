@@ -123,6 +123,9 @@ int main(int argc, char **argv) {
                     &externals))
         return 1;
 
+    if (!nob_mkdir_if_not_exists(TEST_BUILD_FOLDER))
+        return 1;
+
     da_foreach(char *, test, &tests) {
         if (!build_exec(true, &cmd, *test, SRC_FOLDER "tests/",
                         TEST_BUILD_FOLDER, 2, &objects, &externals))
