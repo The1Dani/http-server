@@ -24,4 +24,10 @@ void da_str_push(Da_str *da, char *str);
 // Free da_str
 void da_str_destroy(Da_str da);
 
+char *da_str_pop(Da_str *da);
+
+char *da_str_peek(Da_str *da);
+
+void da_push_list_inversed(Da_str *da, int len, char **li);
+
 #endif

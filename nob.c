@@ -102,8 +102,8 @@ int main(int argc, char **argv) {
     const char *object_names[] = {"simple_lexer", "da", "parse_http",
                                   "url_escape"};
     const char *external_names[] = {"map"};
-    const char *test_names[] = {"test01"};
-
+    const char *test_names[] = {"test01", "test02"};
+    
     da_append_many(&objects, object_names, ARRAY_LEN(object_names));
     da_append_many(&externals, external_names, ARRAY_LEN(external_names));
     da_append_many(&tests, test_names, ARRAY_LEN(test_names));

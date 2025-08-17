@@ -41,8 +41,7 @@ bool parse_field(const char *line, map_t *m, Da_str *da) {
     }
     if (n_tokens > 2) {
         // See here
-        concat_list(&tokens[1], n_tokens - 1, &val,
-                    ":"); // TODO Free the unused tokens in function
+        val = concat_list(&tokens[1], n_tokens - 1, ":");
         is_alloced_sep = true;
     } else
         val = tokens[1];
@@ -72,10 +71,10 @@ Req *http_parse_req(char **lines, size_t line_count) {
     Req *req = calloc(1, sizeof(Req));
 
     /*Parse Idents*/
-    // TODO
     char **list = NULL;
     int n_words = get_words(idents, &list);
-    if (n_words == 0) return NULL;
+    if (n_words == 0)
+        return NULL;
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {
@@ -113,7 +112,7 @@ Req *http_parse_req(char **lines, size_t line_count) {
 
     /*Parse Body*/
     char *body = NULL;
-    concat_list(lines + i + 1, line_count - i - 1, &body, " ");
+    body = concat_list(lines + i + 1, line_count - i - 1, " ");
 
     req->body = body;
     req->fields = (struct fields){
@@ -175,13 +174,13 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
         int n_pair = get_words_from_delim(param_pairs[i], "=", &param_pair);
 
-        if (n_pair <= 0) { // DONT KNOW WHAT TODO
+        if (n_pair <= 0) { // DONT KNOW WHAT 
             continue;
         } else if (n_pair == 1) {
             continue;
         } else if (n_pair > 2) {
             key = param_pair[0];
-            concat_list(param_pair + 1, n_pair - 1, &val, "=");
+            val = concat_list(param_pair + 1, n_pair - 1, "=");
             free_str_list(param_pair + 1, n_pair - 1);
         } else {
             key = param_pair[0];
@@ -200,7 +199,7 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
     free_str_list(param_pairs, n_params);
     free(param_pairs);
-
+    
     return n_params;
 }
 
@@ -216,8 +215,10 @@ char *get_file_path(const char *_uri, map_t *m, Da_str *_key_list) {
     get_querry_params(uri, m, &key_list);
 
     char *url = decode_url(uri);
+    char *s_url = path_sanitize(url);
+    free(url);
 
     free(uri);
     *_key_list = key_list;
-    return url;
+    return s_url;
 }

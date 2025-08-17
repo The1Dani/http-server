@@ -1,11 +1,7 @@
 #ifndef URL_ESCAPE
 #define URL_ESCAPE
 
-#include "da.h"
-#include "simple_lexer.h"
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 
 /*RESERVED CHARACTERS AFTER PERCENT-ENCODING*/
 #define PERCENT_SPACE "%20"             // ' '
@@ -42,6 +38,7 @@
 #define PERCENT_CURLY_BRACE_CLOSE "%7D" // '}'
 #define PERCENT_TILDE "%7E"             // '~'
 
-char *decode_url(char *_s);
+char *decode_url(char *s);
+char *path_sanitize(const char *path);
 
 #endif

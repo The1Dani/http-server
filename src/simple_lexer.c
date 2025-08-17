@@ -1,9 +1,13 @@
 #include "simple_lexer.h"
 #include "da.h"
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 
 void lstrndup(const char *from, char **to, size_t n) {
     if (*to != NULL)
@@ -84,11 +88,7 @@ void lex_get_word(Lexer *lex) {
         lex->status = LEXER_EOF;
         return;
     }
-    // TODO
-    // lex->str = realloc(lex->str, sizeof(char) * (w_len + 1));
-    // memcpy(lex->str, lex->src + lex->cur, w_len);
-    // lex->str[w_len] = '\0';
-    // lex->str = strndup(lex->src + lex->cur, w_len); //new
+
     lstrndup(lex->src + lex->cur, &lex->str, w_len); // nnew
     lex->cur += w_len;
     lex->status = LEXER_SUCCSESS;
@@ -120,11 +120,6 @@ void lex_get_line(Lexer *lex) {
     }
 
     if (lex->status == LEXER_SUCCSESS) {
-        // TODO
-        //  lex->str = realloc(lex->str, sizeof(char) * (line_len + 1));
-        //  memcpy(lex->str, lex->src + start, line_len);
-        //  lex->str[line_len] = '\0';
-        //  lex->str = strndup(lex->src + start, line_len);//new
         lstrndup(lex->src + start, &lex->str, line_len);
         lex->cur += line_len;
     }
@@ -143,12 +138,11 @@ int get_words_from_delim(const char *str, const char *delim, char ***list) {
     char *_body = body;
 
     char *token = NULL;
-    char *saveptr = NULL;
 
     Da_str str_arr = da_str_new();
 
     for (;;) {
-        token = strtok_r(body, delim, &saveptr);
+        token = strtok(body, delim);
         if (token == NULL)
             break;
         da_str_push(&str_arr, strdup(token));
@@ -179,15 +173,12 @@ void concat(char **dst, const char *src) {
     free(dst_);
 }
 
-void concat_list(char **list, int size, char **dest, const char *sep) {
+char *concat_list(char **list, int size, const char *sep) {
 
     if (size <= 0) {
-        return;
+        return NULL;
     }
 
-    if (*dest != NULL) {
-        return;
-    }
     char *dst = ""; //= *dest;
 
     int i = 1;
@@ -199,7 +190,7 @@ void concat_list(char **list, int size, char **dest, const char *sep) {
         // sprintf(dst, "%s%s%s", dst, sep, list[i]);
     }
 
-    *dest = dst;
+    return dst;
 }
 
 void str_shift_right(char *str, unsigned int amount) {
@@ -218,6 +209,40 @@ char *paint_str(const char *str, const char *color) {
         return NULL;
     sprintf(s, ESC "%s%s" ESC_CLOSE, color, str);
     return s;
+}
+
+off_t get_file_size(int fd) {
+    off_t file_size;
+    struct stat stbuf;
+    
+    if (fd == -1)
+        return -1;
+
+    if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode))) {
+        return -1;
+    }
+    file_size = stbuf.st_size;
+
+    return file_size;
+}
+
+int get_file_content(const char *file, char **buf) {
+
+    int fd = open(file, O_RDONLY);
+    if (fd == -1)
+        return -1;
+
+    off_t f_size = get_file_size(fd);
+    if (f_size <= 0) {
+        close(fd);
+        return -1;
+    };
+
+    *buf = malloc(f_size);
+    read(fd, *buf,f_size);
+    close(fd);
+
+    return f_size;
 }
 
 void free_str_list(char **li, size_t len) {

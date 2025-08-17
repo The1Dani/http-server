@@ -1,10 +1,10 @@
 #ifndef SIMP_LEX
 #define SIMP_LEX
 
-#include "da.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #define ESC "\x1b"
 #define RED "[31m"
@@ -45,7 +45,7 @@ int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
 
-void concat_list(char **list, int size, char **dest, const char *sep);
+char* concat_list(char **list, int size, const char *sep);
 
 void str_shift_right(char *str, unsigned int amount);
 
@@ -55,5 +55,7 @@ int get_word_len(Lexer *len);
 char *paint_str(const char *str, const char *color);
 
 void free_str_list(char **li, size_t len);
+
+int get_file_content(const char *file, char **buf);
 
 #endif

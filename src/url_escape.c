@@ -1,4 +1,7 @@
 #include "url_escape.h"
+#include "da.h"
+#include "simple_lexer.h"
+#include <string.h>
 
 #define str_equal(str1, str2) strcmp(str1, str2) == 0
 
@@ -88,7 +91,51 @@ char *decode_url(char *_s) {
         replace_to_ascii(nxt, tok);
     }
 
-    defer:
-        free(tok);
-        return s;
+defer:
+    free(tok);
+    return s;
+}
+
+char *path_sanitize(const char *path) {
+
+    char **broken_path = NULL;
+    int n_broken_path = get_words_from_delim(path, "/", &broken_path);
+
+    if (n_broken_path == 0) {
+        free(broken_path);
+        return strdup("/");
+    }
+
+    Da_str construct = da_str_new();
+
+    for (int i = 0; i < n_broken_path; i++) {
+        if (!strcmp(broken_path[i], "."))
+            continue;
+        if (!strcmp(broken_path[i], "..")) {
+            da_str_pop(&construct);
+            continue;
+        };
+        da_str_push(&construct, broken_path[i]);
+    }
+
+    if (construct.size == 0) {
+        free_str_list(broken_path, n_broken_path);
+        free(broken_path);
+        da_str_destroy(construct);
+        return strdup("/");
+    }
+
+    char *res = concat_list(construct.list, construct.size, "/");
+    char *result = malloc(sizeof(char) * strlen(res) + 2);
+    result[0] = '/';
+    result[1] = '\0';
+
+    strcat(result, res);
+
+    free(res);
+    free_str_list(broken_path, n_broken_path);
+    free(broken_path);
+    da_str_destroy(construct);
+
+    return result;
 }

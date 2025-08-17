@@ -1,4 +1,5 @@
 #include "da.h"
+#include <stddef.h>
 #include <stdlib.h>
 
 // init empty string dynamic array
@@ -33,6 +34,35 @@ void da_str_push(Da_str *da, char *str) {
     }
     da->list[da->size] = str;
     da->size += 1;
+}
+
+char *da_str_pop(Da_str *da) {
+
+    size_t size = da->size;
+    if (size <= 0)
+        return NULL;
+
+    da->size -= 1;
+
+    return da->list[size - 1];
+}
+
+char *da_str_peek(Da_str *da) {
+    size_t size = da->size;
+    if (size <= 0)
+        return NULL;
+    return da->list[size - 1];
+}
+
+void da_push_list_inversed(Da_str *da, int len, char **li) {
+
+    if (da == NULL) {
+        return;
+    }
+
+    for (int i = len - 1; i >= 0; i--) {
+        da_str_push(da, li[i]);
+    }
 }
 
 // Free da_str
