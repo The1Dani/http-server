@@ -50,6 +50,7 @@ void req_free(Req *req);
 
 char *get_file_path(const char *uri, map_t *m, Da_str *key_list);
 
+//TODO make so that you dont use math lib
 size_t construct_response(Resp *r, void *buf);
 
 //TODO
