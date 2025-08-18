@@ -3,6 +3,7 @@
 #include "parse_http.h"
 #include "simple_lexer.h"
 #include <stddef.h>
+#include <string.h>
 
 struct _node {
     char *key;
@@ -13,7 +14,7 @@ void print_node(struct _node n) {
     printf("Node || %s: %s \n", n.key, (char *)n.val);
 }
 
-void print_map(struct fields fields) {
+void print_map(Fields fields) {
 
     map_t *m = fields.fields;
     Da_str *keys = fields.keys;
@@ -24,7 +25,7 @@ void print_map(struct fields fields) {
     }
 }
 
-void log_http_req(Req *req) {
+void log_http_req(Req *req, Resp *resp) {
 
     const char *method = req->method;
     const char *uri = req->uri;
@@ -47,7 +48,7 @@ void log_http_req(Req *req) {
     if (key_list.size != 0)
         printf("Q_PARAMS\n");
 
-    print_map((struct fields){.fields = q_params, .keys = &key_list});
+    print_map((Fields){.fields = q_params, .keys = &key_list});
 
     free(url);
 
@@ -56,9 +57,32 @@ void log_http_req(Req *req) {
         free(map_get(q_params, key));
     }
 
+    Da_str *resp_keys = malloc(sizeof(Da_str));
+    *resp_keys = da_str_new();
+    map_t *m = map_new(DEFAULT_SIZE);
+
+    da_str_push(resp_keys, strdup("key"));
+    map_set(m, "key", strdup("val"));
+
+    //content-type: image/jpeg
+    da_str_push(resp_keys, strdup("content-type"));
+    map_set(m, "content-type", strdup("image/jpeg"));
+
+    char *buf;
+    size_t size = get_file_content("/home/dani/faf/http-server/root/img.jpg", &buf);
+
+    resp->fields.keys = resp_keys;
+    resp->fields.fields = m;
+
+    resp->status_code = 200;
+    resp->status_name = "OK";
+
+    resp->body.body = buf;
+    resp->body.body_len = size;
+
     map_ffree(q_params, key_list.list, key_list.size);
     free_str_list(key_list.list, key_list.size);
     da_str_destroy(key_list);
 }
 
-void req_handler(Req *req) { log_http_req(req); }
+void req_handler(Req *req, Resp *resp) { log_http_req(req, resp); }

@@ -9,12 +9,14 @@
 #define SRC_FOLDER "src/"
 #define EXTERNAL_FOLDER "src/external/"
 #define TEST_BUILD_FOLDER "tests/"
-#undef BUILD_OBJECTS_EVERYTIME
+
+
+#define BUILD_OBJECTS_EVERYTIME
 
 #ifdef BUILD_OBJECTS_EVERYTIME
-    #define BUILD_OBJECTS 1
+#define BUILD_OBJECTS 1
 #else
-    #define BUILD_OBJECTS 0
+#define BUILD_OBJECTS 0
 #endif
 
 #define objects_from_da(cmd, da, output_folder)                                \
@@ -31,7 +33,7 @@ typedef struct {
 void flags_and_cc(Nob_Cmd *cmd) {
     cmd_append(cmd, "gcc");
     nob_cc_flags(cmd);
-    cmd_append(cmd, "-ggdb");
+    cmd_append(cmd, "-ggdb", "-lm");
     cmd_append(cmd, "-pedantic");
     cmd_append(cmd, "-std=c23");
 }
@@ -56,7 +58,7 @@ bool build_object(bool force, Nob_Cmd *cmd, const char *name,
         nob_cc_inputs(cmd, source);
         return cmd_run(cmd);
     }
-    
+
     return true;
 }
 
@@ -102,8 +104,8 @@ int main(int argc, char **argv) {
     const char *object_names[] = {"simple_lexer", "da", "parse_http",
                                   "url_escape"};
     const char *external_names[] = {"map"};
-    const char *test_names[] = {"test01", "test02"};
-    
+    const char *test_names[] = {"test01", "test02", "test03"};
+
     da_append_many(&objects, object_names, ARRAY_LEN(object_names));
     da_append_many(&externals, external_names, ARRAY_LEN(external_names));
     da_append_many(&tests, test_names, ARRAY_LEN(test_names));

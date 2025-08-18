@@ -1,13 +1,12 @@
 #include "simple_lexer.h"
 #include "da.h"
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <fcntl.h>
 #include <unistd.h>
-
 
 void lstrndup(const char *from, char **to, size_t n) {
     if (*to != NULL)
@@ -214,7 +213,7 @@ char *paint_str(const char *str, const char *color) {
 off_t get_file_size(int fd) {
     off_t file_size;
     struct stat stbuf;
-    
+
     if (fd == -1)
         return -1;
 
@@ -239,7 +238,7 @@ int get_file_content(const char *file, char **buf) {
     };
 
     *buf = malloc(f_size);
-    read(fd, *buf,f_size);
+    read(fd, *buf, f_size);
     close(fd);
 
     return f_size;

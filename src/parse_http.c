@@ -3,7 +3,11 @@
 #include "external/map.h"
 #include "simple_lexer.h"
 #include "url_escape.h"
+#include <assert.h>
+#include <fcntl.h>
+#include <math.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,7 +119,7 @@ Req *http_parse_req(char **lines, size_t line_count) {
     body = concat_list(lines + i + 1, line_count - i - 1, " ");
 
     req->body = body;
-    req->fields = (struct fields){
+    req->fields = (Fields){
         .fields = fields,
         .keys = keys,
     };
@@ -174,7 +178,7 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
         int n_pair = get_words_from_delim(param_pairs[i], "=", &param_pair);
 
-        if (n_pair <= 0) { // DONT KNOW WHAT 
+        if (n_pair <= 0) { // DONT KNOW WHAT
             continue;
         } else if (n_pair == 1) {
             continue;
@@ -199,7 +203,7 @@ int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
 
     free_str_list(param_pairs, n_params);
     free(param_pairs);
-    
+
     return n_params;
 }
 
@@ -221,4 +225,114 @@ char *get_file_path(const char *_uri, map_t *m, Da_str *_key_list) {
     free(uri);
     *_key_list = key_list;
     return s_url;
+}
+
+size_t calc_response_size(Resp r) {
+
+    int n_proto, n_scode, n_sname;
+    int n_keys = 0, n_vals = 0;
+    int n_extra = 0;
+    off_t n_body;
+
+    n_proto = strlen(r.protocol);
+    n_scode = (int)floor(log10(r.status_code)) + 1;
+    n_sname = strlen(r.status_name);
+
+    n_extra = 4;
+
+    for (size_t i = 0; i < r.fields.keys->size; i++) {
+        char *key = r.fields.keys->list[i];
+        char *val = map_get(r.fields.fields, key);
+
+        assert(val != NULL);
+        assert(key != NULL);
+
+        n_keys += strlen(key);
+        n_vals +=
+            strlen(val); // Somehow maybe it can be null but i cannot be sure;
+        n_extra += 4;
+    }
+
+    n_extra += 2; // Empty_Field;
+    n_body = r.body.body_len;
+
+    size_t total = n_proto + n_scode + n_sname + n_keys + n_vals + n_extra +
+                   (size_t)n_body;
+
+    return total;
+}
+
+size_t get_ident_line_len(Resp r) {
+    // proto st_code st_name\r\n
+    return strlen(r.protocol) + (size_t)floor(log10(r.status_code)) + 1 +
+           strlen(r.status_name) + 4;
+}
+
+size_t get_field_line_len(Resp r, char *key) {
+
+    assert(key != NULL);
+    char *val = map_get(r.fields.fields, key);
+    val = val != NULL ? val : "";
+
+    // key: val\r\n
+    return strlen(key) + strlen(val) + 4;
+}
+
+size_t construct_response(Resp *r, void *_buf) {
+
+    //! Add Content-Length: xx if needed
+    {
+        if (r->body.body != NULL && r->body.body_len > 0) {
+            char *content_len = "Content-Length";
+            da_str_push(r->fields.keys, content_len);
+
+            size_t c_len = r->body.body_len;
+            char *num = malloc((size_t)floor(log10(c_len)) + 2);
+            sprintf(num, "%zu", c_len);
+            map_set(r->fields.fields, content_len, num);
+        }
+    }
+
+    size_t off = 0;
+    size_t r_size = calc_response_size(*r);
+    *(char **)(_buf) = malloc(r_size);
+    char **buf = (char **)(_buf);
+
+    assert(*buf != NULL);
+
+    {
+        size_t n_ident_line = get_ident_line_len(*r);
+        char ident_line[n_ident_line + 1];
+        sprintf(ident_line, "%s %d %s\r\n", r->protocol, r->status_code,
+                r->status_name);
+        memcpy(*buf + off, ident_line, n_ident_line);
+        off += n_ident_line;
+    }
+
+    {
+        for (size_t i = 0; i < r->fields.keys->size; i++) {
+            char *key = r->fields.keys->list[i];
+            char *val = map_get(r->fields.fields, key);
+            size_t n_field_line = get_field_line_len(*r, key);
+            char field_line[n_field_line + 1];
+
+            sprintf(field_line, "%s: %s\r\n", key, val);
+            memcpy(*buf + off, field_line, n_field_line);
+            off += n_field_line;
+        }
+    }
+
+    /*Empty field line*/
+    memcpy(*buf + off, "\r\n", 2);
+    off += 2;
+
+    {
+        if (r->body.body != NULL && r->body.body_len > 0) {
+            memcpy(*buf + off, r->body.body, r->body.body_len);
+            off += r->body.body_len;
+        }
+    }
+    assert(off == r_size);
+
+    return r_size;
 }

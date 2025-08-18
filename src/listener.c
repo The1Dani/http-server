@@ -51,8 +51,10 @@ int get_soc_str(char **buff, int connfd) {
     return str_lenght;
 }
 
-void http_send_resp_ok(int connfd) {
-    write(connfd, RESP_OK, strlen(RESP_OK));
+void http_send_resp_ok(int connfd, Resp r) {
+    char *buf;
+    size_t size = construct_response(&r, (void *)(&buf));
+    write(connfd, buf, size);
     close(connfd);
 }
 
@@ -84,9 +86,13 @@ void echo_message(int connfd) {
        goto free_label;
     }
 
-    req_handler(req);
+    Resp r = {
+        .protocol = req->protocol,
+    };
 
-    http_send_resp_ok(connfd);
+    req_handler(req, &r);
+
+    http_send_resp_ok(connfd, r);
 
         req_free(req);
     free_label:
