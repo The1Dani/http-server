@@ -56,6 +56,12 @@ void http_send_resp_ok(int connfd, Resp r) {
     size_t size = construct_response(&r, (void *)(&buf));
     write(connfd, buf, size);
     close(connfd);
+
+    TRANSFORM_BUF_TO_C_STR(buf, size);
+    printf("\n%s %s\n", paint_str("[DEBUG]", GREEN), buf);
+
+    free(buf);
+
 }
 
 void echo_message(int connfd) {
@@ -86,9 +92,9 @@ void echo_message(int connfd) {
        goto free_label;
     }
 
-    Resp r = {
-        .protocol = req->protocol,
-    };
+    Resp r = resp_new();
+
+    SET_FIELDS_NEW(r);
 
     req_handler(req, &r);
 

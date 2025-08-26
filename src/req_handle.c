@@ -1,14 +1,29 @@
 #include "da.h"
 #include "external/map.h"
 #include "parse_http.h"
-#include "simple_lexer.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
+#include "simple_lexer.h"
+
+#define ROOT_FOLDER "/home/dani/faf/http-server/root/"
 
 struct _node {
     char *key;
     char *val;
 };
+
+char *mime_types[] = {"text/plain",      "text/css",
+                      "text/csv",        "text/html",
+                      "text/javascript", "text/xml",
+                      "image/avif",      "image/jpeg",
+                      "image/png",       "image/svg+xml",
+                      "audio/mpeg",      "application/json",
+                      "application/pdf", "application/octet-stream",
+                      "text/markdown"
+
+};
+
 
 void print_node(struct _node n) {
     printf("Node || %s: %s \n", n.key, (char *)n.val);
@@ -56,33 +71,73 @@ void log_http_req(Req *req, Resp *resp) {
         char *key = key_list.list[i];
         free(map_get(q_params, key));
     }
+    /*
+     * Create Response
+     */
 
-    Da_str *resp_keys = malloc(sizeof(Da_str));
-    *resp_keys = da_str_new();
-    map_t *m = map_new(DEFAULT_SIZE);
+    RESP_FIELD_APPEND(resp, "key", "val");
 
-    da_str_push(resp_keys, strdup("key"));
-    map_set(m, "key", strdup("val"));
+    // content-type: image/jpeg
+    //  RESP_FIELD_APPEND(resp, "content-type", "image/jpeg");
+    // content-type: text/html; charset=UTF-8
 
-    //content-type: image/jpeg
-    da_str_push(resp_keys, strdup("content-type"));
-    map_set(m, "content-type", strdup("image/jpeg"));
+    dump_file_to_body(resp, ROOT_FOLDER "index.html");
+    if (resp->body.body_len < 0) {
+        set_status_code(resp, 404, "NOT-FOUND");
+    } else {
+        RESP_FIELD_APPEND(resp, "content-type", "text/html; charset=UTF-8");
+        set_status_code(resp, 200, "OK");
+    }
 
-    char *buf;
-    size_t size = get_file_content("/home/dani/faf/http-server/root/img.jpg", &buf);
+    fields_destroy_vals((Fields){
+        .fields = q_params,
+        .keys = &key_list,
+    });
 
-    resp->fields.keys = resp_keys;
-    resp->fields.fields = m;
-
-    resp->status_code = 200;
-    resp->status_name = "OK";
-
-    resp->body.body = buf;
-    resp->body.body_len = size;
-
-    map_ffree(q_params, key_list.list, key_list.size);
-    free_str_list(key_list.list, key_list.size);
-    da_str_destroy(key_list);
+    /*^ The code above is the same hopefully ^*/
+    // map_ffree(q_params, key_list.list, key_list.size);
+    // free_str_list(key_list.list, key_list.size); //< simple-lexer.h
+    // da_str_destroy(key_list);
 }
 
-void req_handler(Req *req, Resp *resp) { log_http_req(req, resp); }
+void serve_dir_handler(Req *req, Resp *resp) {
+
+    Fields uri_fields = fields_new();
+
+    char *req_file_or_dir =
+        get_file_path(req->uri, uri_fields.fields, uri_fields.keys);
+
+    if (!strcmp(req_file_or_dir, "/")) {
+        free(req_file_or_dir);
+        req_file_or_dir = strdup("/index.html");
+    }
+
+    char *abs_path = strdup(ROOT_FOLDER);
+    concat(&abs_path, req_file_or_dir);
+
+    dump_file_to_body(resp, abs_path);
+    switch (resp->body.body_len) {
+    case -1:
+        set_status_code(resp, 404, "NOT-FOUND");
+        break;
+    case -2:
+        char *body = malloc(strlen(req_file_or_dir) + 32);
+        sprintf(body, "<h1>URL: %s </h1>", req_file_or_dir);
+        resp->body.body = body;
+        resp->body.body_len = strlen(body);
+
+        RESP_FIELD_APPEND(resp, "content-type", "text/html; charset=UTF-8");
+        set_status_code(resp, 200, "OK");
+        break;
+    default:
+        enum Mime_Type mime_type = get_mime_type(req_file_or_dir);
+        RESP_FIELD_APPEND(resp, "content-type", mime_types[mime_type]);
+        set_status_code(resp, 200, "OK");
+        break;
+    }
+
+    fields_destroy_vals(uri_fields);
+    free(req_file_or_dir);
+}
+
+void req_handler(Req *req, Resp *resp) { serve_dir_handler(req, resp); }

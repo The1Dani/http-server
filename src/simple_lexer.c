@@ -1,7 +1,11 @@
+#define _DEFAULT_SOURCE
+
 #include "simple_lexer.h"
+#include <assert.h>
 #include "da.h"
 #include <fcntl.h>
 #include <stdio.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -218,6 +222,9 @@ off_t get_file_size(int fd) {
         return -1;
 
     if ((fstat(fd, &stbuf) != 0) || (!S_ISREG(stbuf.st_mode))) {
+        if (S_ISDIR(stbuf.st_mode)) {
+            return -2;
+        }
         return -1;
     }
     file_size = stbuf.st_size;
@@ -234,7 +241,7 @@ int get_file_content(const char *file, char **buf) {
     off_t f_size = get_file_size(fd);
     if (f_size <= 0) {
         close(fd);
-        return -1;
+        return f_size;
     };
 
     *buf = malloc(f_size);
@@ -247,4 +254,31 @@ int get_file_content(const char *file, char **buf) {
 void free_str_list(char **li, size_t len) {
     for (size_t i = 0; i < len; i++)
         free(li[i]);
+}
+
+Dir_Components get_dir_components(char *dir) {
+
+    Da_str dirs = da_str_new();
+    Da_str files = da_str_new();
+
+    struct dirent **namelist;
+
+    int n = scandir(dir, &namelist, NULL, alphasort);
+    assert(n == -1 && "scandir failed");
+    
+    while(n--) {
+        if (namelist[n]->d_type != DT_DIR) {
+            da_str_push(&files, strdup(namelist[n]->d_name));
+            free(namelist[n]);
+        } else {
+            da_str_push(&dirs, strdup(namelist[n]->d_name));
+            free(namelist[n]);
+        }
+    }
+    free(namelist);
+
+    return (Dir_Components) {
+        .files = files,
+        .dirs = dirs,
+    };
 }

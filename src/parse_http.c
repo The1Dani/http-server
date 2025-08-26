@@ -280,6 +280,11 @@ size_t get_field_line_len(Resp r, char *key) {
 
 size_t construct_response(Resp *r, void *_buf) {
 
+    r->body.body_len = r->body.body_len < 0 ? 0 : r->body.body_len;
+
+    assert(r->protocol != NULL);
+    assert(r->status_name != NULL);
+
     //! Add Content-Length: xx if needed
     {
         if (r->body.body != NULL && r->body.body_len > 0) {
@@ -335,4 +340,121 @@ size_t construct_response(Resp *r, void *_buf) {
     assert(off == r_size);
 
     return r_size;
+}
+
+void set_status_code(Resp *r, int status_code, char *code_name) {
+    r->status_code = status_code;
+    r->status_name = code_name;
+}
+
+Fields fields_new() {
+    map_t *f = map_new(DEFAULT_SIZE);
+    Da_str *k = malloc(sizeof(Da_str));
+    *k = da_str_new();
+
+    return (Fields){
+        .fields = f,
+        .keys = k,
+    };
+}
+
+void fields_append(Fields *fs, char *key, char *val) {
+    if (fs->fields == NULL && fs->keys == NULL) {
+        *fs = fields_new();
+    }
+    assert(!((fs->fields == NULL && fs->keys != NULL) ||
+             (fs->fields != NULL && fs->keys == NULL)));
+
+    da_str_push(fs->keys, strdup(key));
+    map_set(fs->fields, key, strdup(val));
+}
+
+void dump_file_to_body(Resp *r, const char *f_name) {
+    char *buf;
+    int size;
+    if ((size = get_file_content(f_name, &buf)) <= 0) {
+
+        switch (size) {
+        case -1:
+            printf("NON-REGULAR-FILE-TYPE\n");
+            
+            break;
+        case -2:
+            char *str;
+            printf("%s DIR-FILE\n", (str = paint_str("[DEBUG]", GREEN)));
+            free(str);
+            
+            break;
+        }
+    }
+
+    r->body.body = buf;
+    r->body.body_len = size;
+}
+
+void fields_destroy(Fields fields) {
+
+    map_ffree(fields.fields, fields.keys->list, fields.keys->size);
+    da_str_destroy(*fields.keys);
+}
+
+/*Also frees the strings inside the keys list*/
+void fields_destroy_vals(Fields fields) {
+
+    char **li = fields.keys->list;
+    size_t size = fields.keys->size;
+
+    fields_destroy(fields);
+
+    free_str_list(li, size);
+}
+
+Resp resp_new() {
+    Resp r = {0};
+    r.protocol = SUPPORTED_PROTOCOL;
+    return r;
+}
+
+enum Mime_Type get_mime_type(char *url) {
+
+    char *f_name = strrchr(url, '/');
+    char *ext = strrchr(f_name, '.');
+    if (ext == NULL) {
+        return APPLICATION_OCTETSTREAM;
+    }
+    if (*(ext + 1) == '\0') {
+        return APPLICATION_OCTETSTREAM;
+    }
+
+    ext = ext + 1;
+
+    if (!strcmp(ext, "txt")) {
+        return TEXT_PLAIN;
+    } else if (!strcmp(ext, "css")) {
+        return TEXT_CSS;
+    } else if (!strcmp(ext, "csv")) {
+        return TEXT_CSV;
+    } else if (!strcmp(ext, "html")) {
+        return TEXT_HTML;
+    } else if (!strcmp(ext, "js")) {
+        return TEXT_JS;
+    } else if (!strcmp(ext, "xml")) {
+        return TEXT_XML;
+    } else if (!strcmp(ext, "avif")) {
+        return IMAGE_AVIF;
+    } else if (!strcmp(ext, "jpg") || !strcmp(ext, "jpeg")) {
+        return IMAGE_JPEG;
+    } else if (!strcmp(ext, "png") || !strcmp(ext, "ico")) {
+        return IMAGE_PNG;
+    } else if (!strcmp(ext, "svg")) {
+        return IMAGE_SVG;
+    } else if (!strcmp(ext, "mpg") || !strcmp(ext, "mpeg")) {
+        return AUDIO_MPEG;
+    } else if (!strcmp(ext, "json")) {
+        return APPLICATION_JSON;
+    } else if (!strcmp(ext, "pdf")) {
+        return APPLICATION_PDF;
+    } else {
+        return APPLICATION_OCTETSTREAM;
+    }
 }

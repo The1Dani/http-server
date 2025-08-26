@@ -1,6 +1,7 @@
 #ifndef SIMP_LEX
 #define SIMP_LEX
 
+#include "da.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,15 @@ typedef struct {
     int status;
 } Lexer;
 
+typedef struct {
+    Da_str files;
+    Da_str dirs;
+} Dir_Components; 
+
+#define TRANSFORM_BUF_TO_C_STR(buf, size)                                      \
+    buf = realloc(buf, size + 1);                                              \
+    buf[size] = '\0'
+
 void lex_destroy(Lexer *lex);
 
 int get_line_len(const char *str);
@@ -45,7 +55,7 @@ int get_words(const char *str, char ***list);
 
 int is_whitespace(char ch);
 
-char* concat_list(char **list, int size, const char *sep);
+char *concat_list(char **list, int size, const char *sep);
 
 void str_shift_right(char *str, unsigned int amount);
 
@@ -57,5 +67,7 @@ char *paint_str(const char *str, const char *color);
 void free_str_list(char **li, size_t len);
 
 int get_file_content(const char *file, char **buf);
+
+void concat(char **dst, const char *src);
 
 #endif
