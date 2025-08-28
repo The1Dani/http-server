@@ -1,11 +1,11 @@
 #ifndef SIMP_LEX
 #define SIMP_LEX
 
-#include "da.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include "arena.h"
 
 #define ESC "\x1b"
 #define RED "[31m"
@@ -49,9 +49,9 @@ void lex_get_line(Lexer *lex);
 
 void lex_get_word(Lexer *lex);
 
-int get_words_from_delim(const char *str, const char *delim, char ***list);
+void get_words_from_delim(const char *str, const char *delim, Da_str *da);
 
-int get_words(const char *str, char ***list);
+void get_words(const char *str, Da_str *da);
 
 int is_whitespace(char ch);
 

@@ -3,6 +3,10 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#define ARENA_IMPLEMENTATION
+#include "../arena.h"
+
+
 int main() {
 
     // '/' -> empty stack

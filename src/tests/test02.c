@@ -4,6 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define ARENA_IMPLEMENTATION
+#include "../arena.h"
+
+
 #define ROOT "/home/dani/faf/http-server/src"
 
 int main(void) {

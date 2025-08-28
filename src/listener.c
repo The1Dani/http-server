@@ -1,6 +1,4 @@
-#include "da.h"
 #include "parse_http.h"
-#include "req_handle.c"
 #include "simple_lexer.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -9,6 +7,12 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#include "req_handle.c"
+
+#define ARENA_IMPLEMENTATION
+#include "arena.h"
+
 
 typedef struct sockaddr sockaddr;
 
@@ -52,16 +56,19 @@ int get_soc_str(char **buff, int connfd) {
 }
 
 void http_send_resp_ok(int connfd, Resp r) {
+
+    Arena *arena = arena_new(KILOBYTE / 8);
+
     char *buf;
     size_t size = construct_response(&r, (void *)(&buf));
     write(connfd, buf, size);
     close(connfd);
 
     TRANSFORM_BUF_TO_C_STR(buf, size);
-    printf("\n%s %s\n", paint_str("[DEBUG]", GREEN), buf);
-
+    printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", GREEN)), buf);
+    
+    arena_free(arena);
     free(buf);
-
 }
 
 void echo_message(int connfd) {
@@ -71,14 +78,17 @@ void echo_message(int connfd) {
     Lexer lexer = {0};
     Lexer *lex = &lexer;
     lex->src = buff;
-    Da_str da = da_str_new();
+
+    Arena *string_arena = arena_new(0);
+    Da_str da = da_str_new(string_arena);
+
 
     for (;;) {
         lex_get_line(lex);
         if (lex->status != LEXER_SUCCSESS)
             break;
         char *line = lex->str;
-        da_str_push(&da, strdup(line));
+        da_str_push(&da, a_strdup(da.arena, line));
         char *msg_str = paint_str("Message:", GREEN);
         printf("%s %s\n", msg_str, line);
         free(msg_str);
@@ -92,18 +102,22 @@ void echo_message(int connfd) {
        goto free_label;
     }
 
-    Resp r = resp_new();
+    Resp resp = {0};
 
-    SET_FIELDS_NEW(r);
+    SET_FIELDS_NEW(resp);
 
-    req_handler(req, &r);
+    resp.protocol = a_strdup(resp.fields.keys->arena, SUPPORTED_PROTOCOL);
 
-    http_send_resp_ok(connfd, r);
+    req_handler(req, &resp);
+
+    http_send_resp_ok(connfd, resp);
+
 
         req_free(req);
     free_label:
-        free_str_list(da.list, da.size);
-        da_str_destroy(da);
+        a_map_free(resp.fields);
+        free(resp.body.body);
+        arena_free(string_arena);
         lex_destroy(lex);
         free(buff);
 }

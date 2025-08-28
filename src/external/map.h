@@ -39,7 +39,7 @@ typedef struct {
  * be returned indicating no memory was able to be
  * allocated.
  */
-map_t *map_new(const unsigned int size);
+map_t *map_new(const unsigned int size); 
 
 /**
  * Also frees the memmory for allocated strings;
@@ -54,13 +54,13 @@ void map_free(map_t *m);
 /**
  * map_get retrieves the value for the given key.
  */
-void *map_get(map_t *m, char *key);
+void *map_get(map_t *m, char *key); 
 
 /**
  * map_set takes a key and a value and sets them
  * in the map.
  */
-int map_set(map_t *m, char *key, void *val);
+int map_set(map_t *m, char *key, void *val); 
 
 /**
  * map_del removes an entry the given key and value

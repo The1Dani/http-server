@@ -1,5 +1,5 @@
 #include "url_escape.h"
-#include "da.h"
+#include "arena.h"
 #include "simple_lexer.h"
 #include <string.h>
 
@@ -98,44 +98,43 @@ defer:
 
 char *path_sanitize(const char *path) {
 
-    char **broken_path = NULL;
-    int n_broken_path = get_words_from_delim(path, "/", &broken_path);
+    Arena *arena = arena_new(0);
+    Da_str broken_path = da_str_new(arena);
+    get_words_from_delim(path, "/", &broken_path);
+    int n_broken_path = broken_path.size;
+
 
     if (n_broken_path == 0) {
-        free(broken_path);
+        arena_free(arena);
         return strdup("/");
     }
 
-    Da_str construct = da_str_new();
+    Da_str construct = da_str_new(arena);
 
     for (int i = 0; i < n_broken_path; i++) {
-        if (!strcmp(broken_path[i], "."))
+        if (!strcmp(broken_path.list[i], "."))
             continue;
-        if (!strcmp(broken_path[i], "..")) {
+        if (!strcmp(broken_path.list[i], "..")) {
             da_str_pop(&construct);
             continue;
         };
-        da_str_push(&construct, broken_path[i]);
+        da_str_push(&construct, broken_path.list[i]);
     }
 
     if (construct.size == 0) {
-        free_str_list(broken_path, n_broken_path);
-        free(broken_path);
-        da_str_destroy(construct);
+        arena_free(arena);
         return strdup("/");
     }
 
-    char *res = concat_list(construct.list, construct.size, "/");
+    char *res = str_to_arena_ptr(arena, concat_list(construct.list, construct.size, "/"));
+
     char *result = malloc(sizeof(char) * strlen(res) + 2);
     result[0] = '/';
     result[1] = '\0';
 
     strcat(result, res);
 
-    free(res);
-    free_str_list(broken_path, n_broken_path);
-    free(broken_path);
-    da_str_destroy(construct);
+    arena_free(arena);
 
     return result;
 }

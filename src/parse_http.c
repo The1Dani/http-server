@@ -1,5 +1,5 @@
 #include "parse_http.h"
-#include "da.h"
+#include "arena.h"
 #include "external/map.h"
 #include "simple_lexer.h"
 #include "url_escape.h"
@@ -20,22 +20,21 @@ int is_end(const char *s) {
     return 0;
 }
 
-bool parse_field(const char *line, map_t *m, Da_str *da) {
+bool parse_field(const char *line, map_a map) {
 
-    if (da == NULL) {
+    Arena *arena = arena_new(0);
+
+    if (map.keys == NULL) {
         printf("DA Pointer is NULL!\n");
         return false;
     }
 
-    if (da->cap == 0 && da->size == 0) {
-        *da = da_str_new();
-    }
+    assert(!(map.keys->cap == 0 && map.keys->size == 0));
 
-    char **tokens = NULL;
-    int n_tokens = get_words_from_delim(line, ":\r", &tokens);
+    Da_str tokens = da_str_new(arena);
+    get_words_from_delim(line, ":\r", &tokens);
+    int n_tokens = tokens.size;
     char *val = NULL;
-
-    bool is_alloced_sep = false;
 
     if (n_tokens <= 1) {
         printf("n_tokens: %d | expected >= 2\n", n_tokens);
@@ -45,53 +44,50 @@ bool parse_field(const char *line, map_t *m, Da_str *da) {
     }
     if (n_tokens > 2) {
         // See here
-        val = concat_list(&tokens[1], n_tokens - 1, ":");
-        is_alloced_sep = true;
+        val = str_to_arena_ptr(arena,
+                               concat_list(&tokens.list[1], n_tokens - 1, ":"));
     } else
-        val = tokens[1];
-    char *key = tokens[0];
-    da_str_push(da, strdup(key));
+        val = tokens.list[1];
+    char *key = tokens.list[0];
 
     str_shift_right(val, 1);
 
-    if (map_set(m, key, strdup(val)) == -1) {
-        printf("map_set did fail\n");
-        return false;
-    }
+    a_map_set(map, key, val);
 
-    if (is_alloced_sep)
-        free(val);
-
-    free_str_list(tokens, n_tokens);
-    free(tokens);
+    arena_free(arena);
 
     return true;
 }
 
 Req *http_parse_req(char **lines, size_t line_count) {
 
+    Arena *arena = arena_new(0);
+
     const char *idents = lines[0];
-    map_t *fields = map_new(DEFAULT_SIZE);
+    map_a fields = a_map_new();
+    Arena *req_arena = fields.keys->arena;
+
     Req *req = calloc(1, sizeof(Req));
 
     /*Parse Idents*/
-    char **list = NULL;
-    int n_words = get_words(idents, &list);
-    if (n_words == 0)
+    Da_str words = da_str_new(arena);
+    get_words(idents, &words);
+
+    int n_words = words.size;
+    if (n_words == 0) {
+        arena_free(arena);
         return NULL;
+    }
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {
-            printf("Token %02d: %s\n", i, list[i - 1]);
+            printf("Token %02d: %s\n", i, words.list[i - 1]);
         }
         exit(1);
     }
-    req->method = strdup(list[0]);
-    req->uri = strdup(list[1]);
-    req->protocol = strdup(list[2]);
-
-    free_str_list(list, n_words);
-    free(list);
+    req->method = a_strdup(req_arena, words.list[0]);
+    req->uri = a_strdup(req_arena, words.list[1]);
+    req->protocol = a_strdup(req_arena, words.list[2]);
 
     if (strcmp(req->protocol, SUPPORTED_PROTOCOL)) {
         printf("Unsupported Protocol %s\n", req->protocol);
@@ -103,14 +99,13 @@ Req *http_parse_req(char **lines, size_t line_count) {
     // req->protocol);
 
     /*Parse Fields*/
-    Da_str *keys = calloc(1, sizeof(Da_str));
 
     size_t i = 1;
     for (; i < line_count; i++) {
         if (is_end(lines[i])) {
             break;
         }
-        if (!parse_field(lines[i], fields, keys))
+        if (!parse_field(lines[i], fields))
             return NULL;
     }
 
@@ -119,111 +114,96 @@ Req *http_parse_req(char **lines, size_t line_count) {
     body = concat_list(lines + i + 1, line_count - i - 1, " ");
 
     req->body = body;
-    req->fields = (Fields){
-        .fields = fields,
-        .keys = keys,
-    };
+    req->fields = fields;
+
+    arena_free(arena);
 
     return req;
 }
 
 void req_free(Req *req) {
-
-    free((void *)req->method);
-    free((void *)req->uri);
-    free((void *)req->protocol);
-    free((void *)req->body);
-
-    for (size_t i = 0; i < req->fields.keys->size; i++) {
-        char *key = req->fields.keys->list[i];
-        void *val = map_get(req->fields.fields, key);
-        free(val);
-    }
-
-    map_ffree(req->fields.fields, req->fields.keys->list,
-              req->fields.keys->size);
-    free_str_list(req->fields.keys->list, req->fields.keys->size);
-    da_str_destroy(*req->fields.keys);
-    free(req->fields.keys);
+    a_map_free(req->fields);
     free(req);
 }
 
 /* Replaces '?' with '\0' */
-int get_querry_params(char *uri, map_t *m, Da_str *key_list) {
+int get_querry_params(char *uri, map_a m) {
+
+    Arena *arena = arena_new(0);
 
     char *q_params = NULL;
 
     if (!(q_params = strchr(uri, '?'))) {
+        arena_free(arena);
         return 0;
     }
 
     q_params[0] = '\0';
     q_params += 1; // GET TO THE PARAMETERS "?asdasd" -> "asdasd"
 
-    char **param_pairs = NULL;
-    int n_params = get_words_from_delim(q_params, "&", &param_pairs);
-
-    if (param_pairs == NULL) {
-        perror("PARAM_PAIRS IS NULL");
+    Da_str param_pairs = da_str_new(arena);
+    get_words_from_delim(q_params, "&", &param_pairs);
+    int n_params = param_pairs.size;
+    if (param_pairs.size == 0) {
+        perror("PARAM_PAIRS IS EMPTY\n");
         // Add frees here
+        arena_free(arena);
         return -1;
     }
 
     /*We dont free the vals bc map stores raw pointers*/
     /*The keys are stored as copied strings*/
     for (int i = 0; i < n_params; i++) {
-        char **param_pair = NULL;
+
+        Arena *temp = arena_new(0);
+
+        Da_str param_pair = da_str_new(temp);
         char *key = NULL;
         char *val = NULL;
 
-        int n_pair = get_words_from_delim(param_pairs[i], "=", &param_pair);
+        get_words_from_delim(param_pairs.list[i], "=", &param_pair);
+        int n_pair = param_pair.size;
 
         if (n_pair <= 0) { // DONT KNOW WHAT
             continue;
         } else if (n_pair == 1) {
             continue;
         } else if (n_pair > 2) {
-            key = param_pair[0];
-            val = concat_list(param_pair + 1, n_pair - 1, "=");
-            free_str_list(param_pair + 1, n_pair - 1);
+            key = param_pair.list[0];
+            val = str_to_arena_ptr(
+                temp, concat_list(param_pair.list + 1, n_pair - 1, "="));
         } else {
-            key = param_pair[0];
-            val = param_pair[1];
+            key = param_pair.list[0];
+            val = param_pair.list[1];
         }
 
-        char *decoded_key = decode_url(key);
-        char *decoded_val = decode_url(val);
-        free(key);
-        free(val);
-        free(param_pair);
+        char *decoded_key = str_to_arena_ptr(temp, decode_url(key));
+        char *decoded_val = str_to_arena_ptr(temp, decode_url(val));
 
-        map_set(m, decoded_key, decoded_val);
-        da_str_push(key_list, decoded_key);
+        a_map_set(m, decoded_key, decoded_val);
     }
 
-    free_str_list(param_pairs, n_params);
-    free(param_pairs);
-
+    arena_free(arena);
     return n_params;
 }
 
-char *get_file_path(const char *_uri, map_t *m, Da_str *_key_list) {
+char *get_file_path(const char *_uri, map_a m) {
+
+    Arena *arena = arena_new(0);
 
     if (_uri == NULL) {
         return NULL;
     }
 
-    char *uri = strdup(_uri);
-    Da_str key_list = da_str_new();
+    char *uri = a_strdup(arena, _uri);
 
-    get_querry_params(uri, m, &key_list);
+    get_querry_params(uri, m);
 
-    char *url = decode_url(uri);
+    char *url = str_to_arena_ptr(arena, decode_url(uri));
     char *s_url = path_sanitize(url);
-    free(url);
 
-    free(uri);
-    *_key_list = key_list;
+    arena_free(arena);
+
     return s_url;
 }
 
@@ -242,7 +222,7 @@ size_t calc_response_size(Resp r) {
 
     for (size_t i = 0; i < r.fields.keys->size; i++) {
         char *key = r.fields.keys->list[i];
-        char *val = map_get(r.fields.fields, key);
+        char *val = a_map_get(r.fields, key);
 
         assert(val != NULL);
         assert(key != NULL);
@@ -271,7 +251,7 @@ size_t get_ident_line_len(Resp r) {
 size_t get_field_line_len(Resp r, char *key) {
 
     assert(key != NULL);
-    char *val = map_get(r.fields.fields, key);
+    char *val = a_map_get(r.fields, key);
     val = val != NULL ? val : "";
 
     // key: val\r\n
@@ -288,13 +268,13 @@ size_t construct_response(Resp *r, void *_buf) {
     //! Add Content-Length: xx if needed
     {
         if (r->body.body != NULL && r->body.body_len > 0) {
-            char *content_len = "Content-Length";
-            da_str_push(r->fields.keys, content_len);
+            char *content_len_str = "Content-Length";
 
             size_t c_len = r->body.body_len;
             char *num = malloc((size_t)floor(log10(c_len)) + 2);
             sprintf(num, "%zu", c_len);
-            map_set(r->fields.fields, content_len, num);
+            a_map_set(r->fields, content_len_str, num);
+            free(num);
         }
     }
 
@@ -317,7 +297,7 @@ size_t construct_response(Resp *r, void *_buf) {
     {
         for (size_t i = 0; i < r->fields.keys->size; i++) {
             char *key = r->fields.keys->list[i];
-            char *val = map_get(r->fields.fields, key);
+            char *val = a_map_get(r->fields, key);
             size_t n_field_line = get_field_line_len(*r, key);
             char field_line[n_field_line + 1];
 
@@ -343,30 +323,9 @@ size_t construct_response(Resp *r, void *_buf) {
 }
 
 void set_status_code(Resp *r, int status_code, char *code_name) {
+    Arena *resp_arena = r->fields.keys->arena;
     r->status_code = status_code;
-    r->status_name = code_name;
-}
-
-Fields fields_new() {
-    map_t *f = map_new(DEFAULT_SIZE);
-    Da_str *k = malloc(sizeof(Da_str));
-    *k = da_str_new();
-
-    return (Fields){
-        .fields = f,
-        .keys = k,
-    };
-}
-
-void fields_append(Fields *fs, char *key, char *val) {
-    if (fs->fields == NULL && fs->keys == NULL) {
-        *fs = fields_new();
-    }
-    assert(!((fs->fields == NULL && fs->keys != NULL) ||
-             (fs->fields != NULL && fs->keys == NULL)));
-
-    da_str_push(fs->keys, strdup(key));
-    map_set(fs->fields, key, strdup(val));
+    r->status_name = a_strdup(resp_arena, code_name);
 }
 
 void dump_file_to_body(Resp *r, const char *f_name) {
@@ -377,13 +336,13 @@ void dump_file_to_body(Resp *r, const char *f_name) {
         switch (size) {
         case -1:
             printf("NON-REGULAR-FILE-TYPE\n");
-            
+
             break;
         case -2:
             char *str;
             printf("%s DIR-FILE\n", (str = paint_str("[DEBUG]", GREEN)));
             free(str);
-            
+
             break;
         }
     }
@@ -407,12 +366,6 @@ void fields_destroy_vals(Fields fields) {
     fields_destroy(fields);
 
     free_str_list(li, size);
-}
-
-Resp resp_new() {
-    Resp r = {0};
-    r.protocol = SUPPORTED_PROTOCOL;
-    return r;
 }
 
 enum Mime_Type get_mime_type(char *url) {

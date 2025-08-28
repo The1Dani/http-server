@@ -2,7 +2,6 @@
 
 #include "simple_lexer.h"
 #include <assert.h>
-#include "da.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <dirent.h>
@@ -11,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "arena.h"
 
 void lstrndup(const char *from, char **to, size_t n) {
     if (*to != NULL)
@@ -128,13 +128,10 @@ void lex_get_line(Lexer *lex) {
     }
 }
 
-int get_words_from_delim(const char *str, const char *delim, char ***list) {
-
-    if (*list != NULL)
-        free(list);
+void get_words_from_delim(const char *str, const char *delim, Da_str *da) {
 
     if (str == NULL) {
-        return 0;
+        return;
     }
 
     char *body = strdup(str);
@@ -142,24 +139,20 @@ int get_words_from_delim(const char *str, const char *delim, char ***list) {
 
     char *token = NULL;
 
-    Da_str str_arr = da_str_new();
-
     for (;;) {
         token = strtok(body, delim);
         if (token == NULL)
             break;
-        da_str_push(&str_arr, strdup(token));
+        da_str_push(da, a_strdup(da->arena, token));
         body = NULL;
     }
 
-    *list = str_arr.list;
     free(_body);
 
-    return str_arr.size;
 }
 
-int get_words(const char *str, char ***list) {
-    return get_words_from_delim(str, WHITE_SPACE, list);
+void get_words(const char *str, Da_str *da) {
+    get_words_from_delim(str, WHITE_SPACE, da);
 }
 
 void concat(char **dst, const char *src) {
@@ -258,8 +251,9 @@ void free_str_list(char **li, size_t len) {
 
 Dir_Components get_dir_components(char *dir) {
 
-    Da_str dirs = da_str_new();
-    Da_str files = da_str_new();
+    Arena *component_arena = arena_new(0);
+    Da_str dirs = da_str_new(component_arena);
+    Da_str files = da_str_new(component_arena);
 
     struct dirent **namelist;
 

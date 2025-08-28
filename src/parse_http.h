@@ -1,10 +1,10 @@
 #ifndef PARSE_HTML
 #define PARSE_HTML
 
-#include "da.h"
 #include "external/map.h"
 #include <assert.h>
 #include <fcntl.h>
+#include "arena.h"
 
 #define SUPPORTED_PROTOCOL "HTTP/1.1"
 #define HTTP_STATUS_OK "200"
@@ -19,12 +19,14 @@ typedef struct {
     Da_str *keys;
 } Fields;
 
+/*When fields destroyed the whole structure is deallocated*/
 typedef struct {
 
     const char *method;
     const char *uri;
     const char *protocol;
-    Fields fields;
+    /*Req_arena lives in fields*/
+    map_a fields;
 
     const char *body;
 
@@ -35,7 +37,7 @@ typedef struct {
     const char *protocol;
     unsigned int status_code;
     char *status_name;
-    Fields fields;
+    map_a fields;
     struct {
         char *body;
         off_t body_len;
@@ -66,7 +68,7 @@ Req *http_parse_req(char **lines, size_t line_count);
 
 void req_free(Req *req);
 
-char *get_file_path(const char *uri, map_t *m, Da_str *key_list);
+char *get_file_path(const char *uri, map_a m);
 
 // TODO make so that you dont use math lib
 size_t construct_response(Resp *r, void *buf);
@@ -76,13 +78,12 @@ void set_status_code(Resp *r, int status_code, char *code_name);
 
 // TODO!
 Fields fields_new();
-#define SET_FIELDS_NEW(r) r.fields = fields_new()
+#define SET_FIELDS_NEW(r) r.fields = a_map_new()
 
 // TODO!
 void fields_append(Fields *fs, char *key, char *val);
 #define RESP_FIELD_APPEND(r, key, val)                                         \
-    assert(&r->fields != NULL);                                                \
-    fields_append(&r->fields, key, val)
+    a_map_set(r->fields, key, val)
 
 // TODO!
 void fields_destroy(Fields fields);
@@ -93,7 +94,6 @@ void fields_destroy_vals(Fields fields);
 // TODO!
 void dump_file_to_body(Resp *r, const char *f_name);
 
-Resp resp_new();
 
 char *get_file_name(char *url);
 
