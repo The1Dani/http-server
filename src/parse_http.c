@@ -280,7 +280,7 @@ size_t construct_response(Resp *r, void *_buf) {
 
     size_t off = 0;
     size_t r_size = calc_response_size(*r);
-    *(char **)(_buf) = malloc(r_size);
+    *(char **)(_buf) = malloc(r_size); //? Some time can be moved to resp arena!
     char **buf = (char **)(_buf);
 
     assert(*buf != NULL);

@@ -5,3 +5,4 @@ nob.old
 listener
 tests/*
 !tests/*.c
+root-*

@@ -103,7 +103,6 @@ char *path_sanitize(const char *path) {
     get_words_from_delim(path, "/", &broken_path);
     int n_broken_path = broken_path.size;
 
-
     if (n_broken_path == 0) {
         arena_free(arena);
         return strdup("/");
@@ -126,7 +125,8 @@ char *path_sanitize(const char *path) {
         return strdup("/");
     }
 
-    char *res = str_to_arena_ptr(arena, concat_list(construct.list, construct.size, "/"));
+    char *res = str_to_arena_ptr(
+        arena, concat_list(construct.list, construct.size, "/"));
 
     char *result = malloc(sizeof(char) * strlen(res) + 2);
     result[0] = '/';

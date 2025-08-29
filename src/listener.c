@@ -1,18 +1,21 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "parse_http.h"
 #include "simple_lexer.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "req_handle.c"
 
 #define ARENA_IMPLEMENTATION
 #include "arena.h"
-
 
 typedef struct sockaddr sockaddr;
 
@@ -65,8 +68,9 @@ void http_send_resp_ok(int connfd, Resp r) {
     close(connfd);
 
     TRANSFORM_BUF_TO_C_STR(buf, size);
-    printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", GREEN)), buf);
-    
+    printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", GREEN)),
+           buf);
+
     arena_free(arena);
     free(buf);
 }
@@ -81,7 +85,6 @@ void echo_message(int connfd) {
 
     Arena *string_arena = arena_new(0);
     Da_str da = da_str_new(string_arena);
-
 
     for (;;) {
         lex_get_line(lex);
@@ -99,7 +102,7 @@ void echo_message(int connfd) {
     Req *req = http_parse_req(da.list, da.size);
 
     if (req == NULL) {
-       goto free_label;
+        goto free_label;
     }
 
     Resp resp = {0};
@@ -112,17 +115,49 @@ void echo_message(int connfd) {
 
     http_send_resp_ok(connfd, resp);
 
+    req_free(req);
+free_label:
+    a_map_free(resp.fields);
+    free(resp.body.body);
+    arena_free(string_arena);
+    lex_destroy(lex);
+    free(buff);
+}
 
-        req_free(req);
-    free_label:
-        a_map_free(resp.fields);
-        free(resp.body.body);
-        arena_free(string_arena);
-        lex_destroy(lex);
-        free(buff);
+void reap_handler(int sig) {
+
+    (void)sig;
+
+    int st_code;
+    pid_t proc;
+    char buf[256];
+
+    while ((proc = waitpid(-1, &st_code, WNOHANG)) > 0) {
+        sprintf(buf, "proc %d, status code: %d", proc, st_code);
+        char *painted_str = paint_str(buf, GREEN);
+        puts(painted_str);
+        free(painted_str);
+    };
+}
+
+void sigint_handler(int sig) {
+    (void)sig;
+
+    exit(0); // Will flush stdio buffers, free memory
 }
 
 int main() {
+
+    { /*Setting a Signal for reaping handlers*/
+        struct sigaction sa;
+
+        sa.sa_handler = reap_handler;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = SA_RESTART;
+        sigaction(SIGCHLD, &sa, NULL);
+
+        signal(SIGINT, sigint_handler); // Free stdio buffers
+    }
 
     int sockfd, connfd;
     struct sockaddr_in servaddr = {0};
@@ -169,7 +204,21 @@ int main() {
             continue;
         }
 
-        echo_message(connfd);
+        pid_t childID;
+        if ((childID = fork()) == -1) {
+            perror("fork err\n");
+            exit(1);
+        }
+
+        if (childID == 0) {
+            puts("A message from a child proc!\n");
+            close(sockfd);
+            echo_message(connfd);
+            exit(EXIT_SUCCESS);
+        } else {
+            close(connfd);
+            puts("client !!!!!");
+        }
     }
 
     return 0;
