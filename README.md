@@ -7,7 +7,7 @@ make && ./nob
 
 ## HOW TO RUN
 ```bash
-./build/listener
+./listener
 ```
 Go to
 ```sh
