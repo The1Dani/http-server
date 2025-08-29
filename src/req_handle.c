@@ -1,12 +1,15 @@
+#include "req_handle.h"
+#include "arena.h"
 #include "external/map.h"
 #include "parse_http.h"
+#include "simple_lexer.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include "simple_lexer.h"
-#include "arena.h"
 
-#define ROOT_FOLDER "/home/dani/faf/http-server/root/"
+// #define ROOT_FOLDER "/home/dani/faf/http-server/root/"
+
+char *ROOT_FOLDER = "/home/dani/faf/http-server/root/";
 
 struct _node {
     char *key;
@@ -24,7 +27,6 @@ char *mime_types[] = {"text/plain",      "text/css",
 
 };
 
-
 void print_node(struct _node n) {
     printf("Node || %s: %s \n", n.key, (char *)n.val);
 }
@@ -38,6 +40,27 @@ void print_map(map_a fields) {
         char *key = keys->list[i];
         print_node((struct _node){.key = key, .val = (char *)map_get(m, key)});
     }
+}
+
+char *get_file_path_str(char *file_name) {
+
+    /*Check if the root dir has '/' at the end if not put it*/
+    char *result = NULL;
+    Arena *arena = arena_new(KILOBYTE / 8);
+    Da_str da = da_str_new(arena);
+
+    da_str_push(&da, a_strdup(arena, ROOT_FOLDER));
+
+    if (ROOT_FOLDER[strlen(ROOT_FOLDER) - 1] != '/') {
+        da_str_push(&da, a_strdup(arena, "/"));
+    }
+
+    da_str_push(&da, a_strdup(arena, file_name));
+
+    result = concat_list(da.list, da.size, "");
+
+    arena_free(arena);
+    return result;
 }
 
 void log_http_req(Req *req, Resp *resp) {
@@ -65,7 +88,6 @@ void log_http_req(Req *req, Resp *resp) {
 
     print_map(q_params);
 
-    
     /*
      * Create Response
      */
@@ -76,7 +98,11 @@ void log_http_req(Req *req, Resp *resp) {
     //  RESP_FIELD_APPEND(resp, "content-type", "image/jpeg");
     // content-type: text/html; charset=UTF-8
 
-    dump_file_to_body(resp, ROOT_FOLDER "index.html");
+    char *file_path = get_file_path_str("index.html");
+
+    dump_file_to_body(resp, file_path);
+    free(file_path);
+
     if (resp->body.body_len < 0) {
         set_status_code(resp, 404, "NOT-FOUND");
     } else {
@@ -85,7 +111,6 @@ void log_http_req(Req *req, Resp *resp) {
     }
 
     a_map_free(q_params);
-    
 
     /*^ The code above is the same hopefully ^*/
     // map_ffree(q_params, key_list.list, key_list.size);
@@ -97,8 +122,7 @@ void serve_dir_handler(Req *req, Resp *resp) {
 
     map_a uri_fields = a_map_new();
 
-    char *req_file_or_dir =
-        get_file_path(req->uri, uri_fields);
+    char *req_file_or_dir = get_file_path(req->uri, uri_fields);
 
     if (!strcmp(req_file_or_dir, "/")) {
         free(req_file_or_dir);
@@ -110,7 +134,7 @@ void serve_dir_handler(Req *req, Resp *resp) {
 
     dump_file_to_body(resp, abs_path);
     free(abs_path);
-    
+
     switch (resp->body.body_len) {
     case -1:
         set_status_code(resp, 404, "NOT-FOUND");

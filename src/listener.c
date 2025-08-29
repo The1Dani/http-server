@@ -1,7 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
 
-#include "parse_http.h"
-#include "simple_lexer.h"
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <signal.h>
@@ -12,7 +10,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "req_handle.c"
+#include "parse_http.h"
+#include "req_handle.h"
+#include "simple_lexer.h"
+#include <bits/getopt_core.h>
+
 
 #define ARENA_IMPLEMENTATION
 #include "arena.h"
@@ -146,7 +148,49 @@ void sigint_handler(int sig) {
     exit(0); // Will flush stdio buffers, free memory
 }
 
-int main() {
+#define MAKE_FREE_FUNC(ptr)                                                    \
+    void free_func_##ptr(void) {                                               \
+        free(ptr);                                                             \
+        ptr = NULL;                                                            \
+    }
+
+MAKE_FREE_FUNC(ROOT_FOLDER)
+
+int main(int argc, char **argv) {
+
+    {
+        int opt;
+#define HELP_MESSAGE                                                           \
+    "Help Message\n"                                                           \
+    "-r [dir] - Specify a root directory to serve\n"
+        /*
+         ! Determine Help message!
+        */
+        while ((opt = getopt(argc, argv, "hr:")) != -1) {
+            switch (opt) {
+            case 'h':
+                puts(HELP_MESSAGE);
+                break;
+            case 'r':
+                if (!is_dir(optarg)) {
+                    fprintf(stderr, "The string specified with -r flag is not "
+                                    "a valid directory\n");
+                    exit(1);
+                }
+                ROOT_FOLDER = strdup(optarg);
+                if (atexit(free_func_ROOT_FOLDER)) {
+                    puts("At exit failed\n");
+                    exit(1);
+                }
+                break;
+            default:
+                fprintf(stderr, HELP_MESSAGE);
+                exit(1);
+                break;
+            }
+        }
+        printf("%s is the current root directory\n", ROOT_FOLDER);
+    }
 
     { /*Setting a Signal for reaping handlers*/
         struct sigaction sa;
@@ -168,10 +212,6 @@ int main() {
     }
     printf("Socket Created Successfully!\n");
 
-    /*To reuse address*/
-    /**
-     * TODO Read about setsockopt
-     */
     int opt = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         perror("setsockopt");

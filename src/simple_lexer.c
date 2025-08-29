@@ -1,16 +1,16 @@
 #define _DEFAULT_SOURCE
 
 #include "simple_lexer.h"
+#include "arena.h"
 #include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "arena.h"
 
 void lstrndup(const char *from, char **to, size_t n) {
     if (*to != NULL)
@@ -148,7 +148,6 @@ void get_words_from_delim(const char *str, const char *delim, Da_str *da) {
     }
 
     free(_body);
-
 }
 
 void get_words(const char *str, Da_str *da) {
@@ -259,8 +258,8 @@ Dir_Components get_dir_components(char *dir) {
 
     int n = scandir(dir, &namelist, NULL, alphasort);
     assert(n == -1 && "scandir failed");
-    
-    while(n--) {
+
+    while (n--) {
         if (namelist[n]->d_type != DT_DIR) {
             da_str_push(&files, strdup(namelist[n]->d_name));
             free(namelist[n]);
@@ -271,8 +270,22 @@ Dir_Components get_dir_components(char *dir) {
     }
     free(namelist);
 
-    return (Dir_Components) {
+    return (Dir_Components){
         .files = files,
         .dirs = dirs,
     };
+}
+
+int is_dir(const char *f_name) {
+    struct stat fs;
+
+    if (stat(f_name, &fs) < 0) {
+        return 0;
+    }
+
+    if (!S_ISDIR(fs.st_mode)) {
+        return 0;
+    }
+
+    return 1;
 }

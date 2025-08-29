@@ -70,4 +70,6 @@ int get_file_content(const char *file, char **buf);
 
 void concat(char **dst, const char *src);
 
+int is_dir(const char *f_name);
+
 #endif
