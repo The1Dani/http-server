@@ -8,11 +8,6 @@
 
 #define SUPPORTED_PROTOCOL "HTTP/1.1"
 #define HTTP_STATUS_OK "200"
-#define RESP_OK                                                                \
-    SUPPORTED_PROTOCOL                                                         \
-    " " HTTP_STATUS_OK " OK\r\n"                                               \
-    "Content-Type: text/html; charset=UTF-8\r\n\r\n"                           \
-    "<h1>elifusu çk sevyrm :33</h1>"
 
 typedef struct {
     map_t *fields;
