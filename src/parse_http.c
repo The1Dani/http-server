@@ -335,8 +335,9 @@ void dump_file_to_body(Resp *r, const char *f_name) {
 
         switch (size) {
         case -1:
-            printf("NON-REGULAR-FILE-TYPE\n");
-
+            // I think that -1 could indicate no file so i dont want to exit and maybe throw a 404
+            // printf("NON-REGULAR-FILE-TYPE `%s'\n", f_name);
+            // exit(1);
             break;
         case -2:
             char *str;
@@ -403,7 +404,7 @@ enum Mime_Type get_mime_type(char *url) {
         return IMAGE_SVG;
     } else if (!strcmp(ext, "mpg") || !strcmp(ext, "mpeg")) {
         return AUDIO_MPEG;
-    } else if (!strcmp(ext, "json")) {
+    } else if (!strcmp(ext, "json") || !strcmp(ext, "map")) {
         return APPLICATION_JSON;
     } else if (!strcmp(ext, "pdf")) {
         return APPLICATION_PDF;

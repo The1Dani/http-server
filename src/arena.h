@@ -182,7 +182,7 @@ void da_realloc(Da_str *da) {
         da->cap = 1;
     assert(da->size <= da->cap);
     da->cap *= 2;
-    da->list = arena_realloc(da->arena, da->list, old_cap, da->cap);
+    da->list = arena_realloc(da->arena, da->list, old_cap * sizeof(char *), da->cap * sizeof(char *));
 }
 
 void da_str_push(Da_str *da, char *str) {

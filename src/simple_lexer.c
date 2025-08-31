@@ -126,6 +126,12 @@ void lex_get_line(Lexer *lex) {
         lstrndup(lex->src + start, &lex->str, line_len);
         lex->cur += line_len;
     }
+    // if (lex->status == LEXER_EMPTY) {
+    //     printf("LEXER FOUND EMPTY FILE\n");
+    // }
+    // if (lex->status == LEXER_EOF) {
+    //     printf("LEXER EOF\n");
+    // }
 }
 
 void get_words_from_delim(const char *str, const char *delim, Da_str *da) {

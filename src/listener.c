@@ -1,4 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
+#include <assert.h>
+#include <errno.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -15,7 +17,6 @@
 #include "simple_lexer.h"
 #include <bits/getopt_core.h>
 
-
 #define ARENA_IMPLEMENTATION
 #include "arena.h"
 
@@ -23,12 +24,20 @@ typedef struct sockaddr sockaddr;
 
 #define IP "127.0.0.1"
 #define PORT 8080
-#define QUE_LEN 5
+#define QUE_LEN 25
 #define BUFF_SIZE 8
 
 void clean_and_exit(int sockfd, int status) {
     close(sockfd);
     exit(status);
+}
+
+void set_nonblocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    if (flags == -1)
+        return;
+
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 int get_soc_str(char **buff, int connfd) {
@@ -54,7 +63,18 @@ int get_soc_str(char **buff, int connfd) {
         *buff = realloc(*buff, (str_lenght + 1) * sizeof(char));
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
     } else {
-        exit(1);
+        if (n == -1) {
+
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+#ifdef DEBUG_MODE
+                fprintf(stderr, "No data available right now, skipping...\n");
+#endif
+            } else {
+                exit(1);
+            }
+        } else {
+            exit(2);
+        }
     }
     (*buff)[str_lenght] = '\0';
     return str_lenght;
@@ -69,9 +89,16 @@ void http_send_resp_ok(int connfd, Resp r) {
     write(connfd, buf, size);
     close(connfd);
 
+#ifdef DEBUG_MODE
+    if (!strcmp(a_map_get(r.fields, "content-type"), mime_types[TEXT_CSS]))
+        goto end;
+
     TRANSFORM_BUF_TO_C_STR(buf, size);
     printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", GREEN)),
            buf);
+
+end:
+#endif
 
     arena_free(arena);
     free(buf);
@@ -88,16 +115,21 @@ void echo_message(int connfd) {
     Arena *string_arena = arena_new(0);
     Da_str da = da_str_new(string_arena);
 
+    char *msg_str = paint_str("Message:", GREEN);
+
     for (;;) {
         lex_get_line(lex);
         if (lex->status != LEXER_SUCCSESS)
             break;
         char *line = lex->str;
+        assert(line != NULL);
         da_str_push(&da, a_strdup(da.arena, line));
-        char *msg_str = paint_str("Message:", GREEN);
-        printf("%s %s\n", msg_str, line);
-        free(msg_str);
+#ifdef DEBUG_MODE
+        printf("Proc %d | %s %s\n", getpid(), msg_str, line);
+#endif
     }
+
+    free(msg_str);
     if (buff == NULL)
         exit(1);
 
@@ -130,15 +162,18 @@ void reap_handler(int sig) {
 
     (void)sig;
 
-    int st_code;
+    pid_t st_code;
     pid_t proc;
+#ifdef DEBUG_MODE
     char buf[256];
-
+#endif
     while ((proc = waitpid(-1, &st_code, WNOHANG)) > 0) {
-        sprintf(buf, "proc %d, status code: %d", proc, st_code);
+#ifdef DEBUG_MODE
+        sprintf(buf, "proc %d, status code: %u", proc, st_code);
         char *painted_str = paint_str(buf, GREEN);
         puts(painted_str);
         free(painted_str);
+#endif
     };
 }
 
@@ -251,13 +286,18 @@ int main(int argc, char **argv) {
         }
 
         if (childID == 0) {
-            puts("A message from a child proc!\n");
+#ifdef DEBUG_MODE
+            printf("A message from a child proc!\n");
+#endif
             close(sockfd);
+            set_nonblocking(connfd);
             echo_message(connfd);
             exit(EXIT_SUCCESS);
         } else {
             close(connfd);
-            puts("client !!!!!");
+#ifdef DEBUG_MODE
+            printf("client !!!!! from ID %d\n", childID);
+#endif
         }
     }
 
