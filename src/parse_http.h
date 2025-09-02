@@ -65,28 +65,21 @@ void req_free(Req *req);
 
 char *get_file_path(const char *uri, map_a m);
 
-// TODO make so that you dont use math lib
 size_t construct_response(Resp *r, void *buf);
 
-// TODO!
 void set_status_code(Resp *r, int status_code, char *code_name);
 
-// TODO!
 Fields fields_new();
 #define SET_FIELDS_NEW(r) r.fields = a_map_new()
 
-// TODO!
 void fields_append(Fields *fs, char *key, char *val);
 #define RESP_FIELD_APPEND(r, key, val)                                         \
     a_map_set(r->fields, key, val)
 
-// TODO!
 void fields_destroy(Fields fields);
 
-// TODO!
 void fields_destroy_vals(Fields fields);
 
-// TODO!
 void dump_file_to_body(Resp *r, const char *f_name);
 
 
