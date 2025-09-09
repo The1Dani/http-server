@@ -147,12 +147,14 @@ void serve_dir_handler(Req *req, Resp *resp) {
 
         RESP_FIELD_APPEND(resp, "content-type", "text/html; charset=UTF-8");
         set_status_code(resp, 200, "OK");
+        dump_dir_list_html(resp, req_file_or_dir, ROOT_FOLDER);
         break;
     default:
         enum Mime_Type mime_type = get_mime_type(req_file_or_dir);
         RESP_FIELD_APPEND(resp, "content-type", mime_types[mime_type]);
         set_status_code(resp, 200, "OK");
         break;
+
     }
 
     a_map_free(uri_fields);

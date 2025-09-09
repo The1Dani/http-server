@@ -230,6 +230,7 @@ off_t get_file_size(int fd) {
     return file_size;
 }
 
+/*Returns the number of bytes read*/
 int get_file_content(const char *file, char **buf) {
 
     int fd = open(file, O_RDONLY);
@@ -254,7 +255,7 @@ void free_str_list(char **li, size_t len) {
         free(li[i]);
 }
 
-Dir_Components get_dir_components(char *dir) {
+DirComponents get_dir_components(char *dir) {
 
     Arena *component_arena = arena_new(0);
     Da_str dirs = da_str_new(component_arena);
@@ -263,7 +264,7 @@ Dir_Components get_dir_components(char *dir) {
     struct dirent **namelist;
 
     int n = scandir(dir, &namelist, NULL, alphasort);
-    assert(n == -1 && "scandir failed");
+    assert(n != -1 && "scandir failed");
 
     while (n--) {
         if (namelist[n]->d_type != DT_DIR) {
@@ -276,7 +277,7 @@ Dir_Components get_dir_components(char *dir) {
     }
     free(namelist);
 
-    return (Dir_Components){
+    return (DirComponents){
         .files = files,
         .dirs = dirs,
     };

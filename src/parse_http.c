@@ -328,18 +328,25 @@ void set_status_code(Resp *r, int status_code, char *code_name) {
     r->status_name = a_strdup(resp_arena, code_name);
 }
 
+/*
+ * Return values is the file byte lenght that was written to the buffer.
+ * Special Cases:
+ * -1: Non Regular File Type, in this case the buffer is not populated and can
+ * contain garbage -2: Directory File, in this case the file is a directory and
+ * the body is not populated
+ */
 void dump_file_to_body(Resp *r, const char *f_name) {
     char *buf;
     int size;
     if ((size = get_file_content(f_name, &buf)) <= 0) {
 
         switch (size) {
-        case -1:
-            // I think that -1 could indicate no file so i dont want to exit and maybe throw a 404
-            // printf("NON-REGULAR-FILE-TYPE `%s'\n", f_name);
+        case NON_REGULAR_FILE:
+            // I think that -1 could indicate no file so i dont want to exit and
+            // maybe throw a 404 printf("NON-REGULAR-FILE-TYPE `%s'\n", f_name);
             // exit(1);
             break;
-        case -2:
+        case DIRECTORY_FILE:
             char *str;
             printf("%s DIR-FILE\n", (str = paint_str("[DEBUG]", GREEN)));
             free(str);
@@ -348,8 +355,99 @@ void dump_file_to_body(Resp *r, const char *f_name) {
         }
     }
 
-    r->body.body = buf;
+    if (size != NON_REGULAR_FILE)
+        r->body.body = buf;
     r->body.body_len = size;
+}
+
+void dump_dir_list_html(Resp *r, char *dir_name, char *root) {
+
+    Arena *arena = arena_new(0);
+    char *abs_path = strdup(root);
+    concat(&abs_path, dir_name);
+    abs_path = str_to_arena_ptr(arena, abs_path);
+
+    assert(dir_name != NULL);
+
+    puts(abs_path);
+    char *dir_n = strrchr(dir_name, '/');
+    if (dir_n == NULL) {
+        dir_n = dir_name;
+    }
+    assert(is_dir(abs_path) &&
+           "dump_dir_list_html function cannot be used on files that are "
+           "not directories");
+
+    DirComponents comps = get_dir_components(abs_path);
+
+    Da_str html_gen = da_str_new(arena);
+    Da_str *da = &html_gen;
+
+    char *style_buf;
+    int s = get_file_content(STYLESHEET_PATH, &style_buf);
+    TRANSFORM_BUF_TO_C_STR(style_buf, s);
+
+    da_str_push(da, "<!DOCTYPE html>");
+    da_str_push(da, "<html><head><meta charset = \"UTF-8\">");
+    char *title_tag[16 + 1 + strlen(dir_n)];
+    sprintf((char *)title_tag, "<title>%s</title>", dir_n);
+    da_str_push(da, (char *)title_tag);
+    da_str_push(da, "<style>");
+    da_str_push(da, style_buf);
+    da_str_push(da, "</style>");
+    da_str_push(da,
+                "</head>"); // Consider to put the css in another file
+    da_str_push(da, "<body>");
+    da_str_push(da, "<div class=\"container\">");
+    da_str_push(da, "<h1>Directory ");
+    da_str_push(da, dir_n);
+    da_str_push(da, "</h1>");
+    da_str_push(da, "<table class=\"table\">");
+    da_str_push(da, "<thead><tr><th>Path</th></tr></thead>");
+    da_str_push(da, "<tbody>");
+    for (size_t i = 0; i < comps.dirs.size; i++) {
+        da_str_push(da, "<tr><td><a href=\"");
+
+        char *new_uri = strdup(dir_name);
+        concat(&new_uri, "/");
+        concat(&new_uri, comps.dirs.list[i]);
+
+        char *santized_path = path_sanitize(new_uri);
+        
+        printf("Dir name in html %s\n", new_uri);
+        free(new_uri);
+        
+        char *_sanitized_path = str_to_arena_ptr(arena, santized_path);
+        
+        da_str_push(da, _sanitized_path);
+        da_str_push(da, "\">");
+        da_str_push(da, _sanitized_path);
+        da_str_push(da, "</a></td></tr>");
+
+    }
+    for (size_t i = 0; i < comps.files.size; i++) {
+        da_str_push(da, "<tr><td><a href=\"");
+
+        char *new_uri = strdup(dir_name);
+        concat(&new_uri, "/");
+        concat(&new_uri, comps.files.list[i]);
+        da_str_push(da, new_uri);
+        da_str_push(da, "\">");
+        da_str_push(da, new_uri);
+        da_str_push(da, "</a></td></tr>");
+    }
+    da_str_push(da, "</tbody>");
+    da_str_push(da, "</table>");
+    da_str_push(da, "</div>");
+    da_str_push(da, "</body></html>");
+
+    char *buf = concat_list(da->list, da->size, "");
+    size_t len = strlen(buf);
+
+    arena_free(arena);
+
+    r->body.body = buf;
+    r->body.body_len = len;
 }
 
 void fields_destroy(Fields fields) {

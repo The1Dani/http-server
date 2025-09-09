@@ -152,7 +152,8 @@ void echo_message(int connfd) {
     req_free(req);
 free_label:
     a_map_free(resp.fields);
-    free(resp.body.body);
+    if (resp.body.body != NULL)
+        free(resp.body.body);
     arena_free(string_arena);
     lex_destroy(lex);
     free(buff);

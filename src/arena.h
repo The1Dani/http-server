@@ -53,6 +53,7 @@ typedef struct {
 } map_a;
 
 /*Arena Functions*/
+/*If size <= 0 -> size=DEFAULT_ARENA_SIZE*/
 Arena *arena_new(size_t size);
 void *arena_alloc(Arena *arena, size_t size);
 void arena_free(Arena *arena);

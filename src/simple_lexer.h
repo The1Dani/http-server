@@ -35,7 +35,7 @@ typedef struct {
 typedef struct {
     Da_str files;
     Da_str dirs;
-} Dir_Components; 
+} DirComponents; 
 
 #define TRANSFORM_BUF_TO_C_STR(buf, size)                                      \
     buf = realloc(buf, size + 1);                                              \
@@ -71,5 +71,7 @@ int get_file_content(const char *file, char **buf);
 void concat(char **dst, const char *src);
 
 int is_dir(const char *f_name);
+
+DirComponents get_dir_components(char *dir);
 
 #endif
