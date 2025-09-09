@@ -1,6 +1,5 @@
 #include "parse_http.h"
 #include "arena.h"
-#include "external/map.h"
 #include "simple_lexer.h"
 #include "url_escape.h"
 #include <assert.h>
@@ -450,21 +449,9 @@ void dump_dir_list_html(Resp *r, char *dir_name, char *root) {
     r->body.body_len = len;
 }
 
-void fields_destroy(Fields fields) {
-
-    map_ffree(fields.fields, fields.keys->list, fields.keys->size);
-    da_str_destroy(*fields.keys);
-}
-
-/*Also frees the strings inside the keys list*/
-void fields_destroy_vals(Fields fields) {
-
-    char **li = fields.keys->list;
-    size_t size = fields.keys->size;
-
-    fields_destroy(fields);
-
-    free_str_list(li, size);
+void write_redirect(Resp *r, char *uri) {
+    set_status_code(r, 301, "Moved Permanently");
+    fields_append(r->fields, "Location", uri);
 }
 
 enum Mime_Type get_mime_type(char *url) {
