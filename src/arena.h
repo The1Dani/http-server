@@ -153,7 +153,7 @@ void arena_free(struct Arena *arena) {
 char *a_strdup(Arena *arena, const char *str) {
     size_t str_mem_size = strlen(str) + 1;
     char *arena_str = arena_alloc(arena, str_mem_size);
-    strncpy(arena_str, str, str_mem_size - 1);
+    strncpy(arena_str, str, str_mem_size);
     return arena_str;
 }
 
