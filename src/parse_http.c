@@ -413,7 +413,7 @@ void dump_dir_list_html(Resp *r, char *dir_name, char *root) {
 
         char *santized_path = path_sanitize(new_uri);
         
-        printf("Dir name in html %s\n", new_uri);
+        // printf("Dir name in html %s\n", new_uri);
         free(new_uri);
         
         char *_sanitized_path = str_to_arena_ptr(arena, santized_path);
