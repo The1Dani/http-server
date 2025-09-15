@@ -10,8 +10,9 @@
 #define EXTERNAL_FOLDER "src/external/"
 #define TEST_BUILD_FOLDER "tests/"
 
-
 #define BUILD_OBJECTS_EVERYTIME
+
+#define PROD
 
 #ifdef BUILD_OBJECTS_EVERYTIME
 #define BUILD_OBJECTS 1
@@ -33,7 +34,12 @@ typedef struct {
 void flags_and_cc(Nob_Cmd *cmd) {
     cmd_append(cmd, "gcc");
     nob_cc_flags(cmd);
-    cmd_append(cmd, "-ggdb", "-lm");
+    cmd_append(cmd, "-lm");
+#ifndef PROD
+    cmd_append(cmd, "-ggdb");
+#else  // PROD
+    cmd_append(cmd, "-O3");
+#endif // PROD
     cmd_append(cmd, "-pedantic");
     cmd_append(cmd, "-std=c23");
 }
@@ -101,8 +107,8 @@ int main(int argc, char **argv) {
     Strings objects = {0};
     Strings externals = {0};
     Strings tests = {0};
-    const char *object_names[] = {"simple_lexer", "parse_http",
-                                  "url_escape", "req_handle"};
+    const char *object_names[] = {"simple_lexer", "parse_http", "url_escape",
+                                  "req_handle"};
     const char *external_names[] = {"map"};
     const char *test_names[] = {"test01", "test02", "test03"};
 
