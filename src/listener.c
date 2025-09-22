@@ -22,7 +22,7 @@
 
 typedef struct sockaddr sockaddr;
 
-#define IP "127.0.0.1"
+#define IP "0.0.0.0"
 #define PORT 8080
 #define QUE_LEN 25
 #define BUFF_SIZE 8
@@ -247,6 +247,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
     printf("Socket Created Successfully!\n");
+
+    printf("Serving %s on Port %d\n", IP, PORT);
 
     int opt = 1;
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {

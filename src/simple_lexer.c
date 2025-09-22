@@ -1,5 +1,4 @@
 #define _DEFAULT_SOURCE
-
 #include "simple_lexer.h"
 #include "arena.h"
 #include <assert.h>
@@ -11,6 +10,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <ctype.h>
 
 void lstrndup(const char *from, char **to, size_t n) {
     if (*to != NULL)
@@ -49,14 +49,6 @@ int get_line_len(const char *str) {
     return 0;
 }
 
-int is_whitespace(char ch) {
-    if (ch <= 13 && ch >= 9)
-        return 1;
-    if (ch == ' ')
-        return 1;
-    return 0;
-}
-
 /*It consumes all whitespace till the next word start*/
 int get_word_len(Lexer *lex) {
 
@@ -64,7 +56,7 @@ int get_word_len(Lexer *lex) {
     char cur_char = lex->src[lex->cur];
     if (cur_char == '\0')
         return 0;
-    if (is_whitespace(cur_char)) {
+    if (isspace(cur_char)) {
         lex->cur += 1;
         return get_word_len(lex);
     }
@@ -72,7 +64,7 @@ int get_word_len(Lexer *lex) {
     int len = 0;
     for (;;) {
         cur_char = lex->src[lex->cur];
-        if (is_whitespace(cur_char) || cur_char == '\0') {
+        if (isspace(cur_char) || cur_char == '\0') {
             break;
         }
         len++;
