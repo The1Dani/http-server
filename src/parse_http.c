@@ -80,7 +80,11 @@ Req *http_parse_req(char **lines, size_t line_count) {
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
         for (int i = 1; i <= n_words; i++) {
-            printf("Token %02d: %s\n", i, words.list[i - 1]);
+            printf("Token %02d: ", i);
+            for (int i = 0; words.list[i - 1][i] != '\0'; i++) {
+                printf("%02x ", words.list[i - 1][i]);
+            }
+            printf("\n");
         }
         exit(1);
     }
@@ -452,48 +456,4 @@ void dump_dir_list_html(Resp *r, char *dir_name, char *root) {
 void write_redirect(Resp *r, char *uri) {
     set_status_code(r, 301, "Moved Permanently");
     fields_append(r->fields, "Location", uri);
-}
-
-enum Mime_Type get_mime_type(char *url) {
-
-    char *f_name = strrchr(url, '/');
-    char *ext = strrchr(f_name, '.');
-    if (ext == NULL) {
-        return APPLICATION_OCTETSTREAM;
-    }
-    if (*(ext + 1) == '\0') {
-        return APPLICATION_OCTETSTREAM;
-    }
-
-    ext = ext + 1;
-
-    if (!strcmp(ext, "txt")) {
-        return TEXT_PLAIN;
-    } else if (!strcmp(ext, "css")) {
-        return TEXT_CSS;
-    } else if (!strcmp(ext, "csv")) {
-        return TEXT_CSV;
-    } else if (!strcmp(ext, "html")) {
-        return TEXT_HTML;
-    } else if (!strcmp(ext, "js")) {
-        return TEXT_JS;
-    } else if (!strcmp(ext, "xml")) {
-        return TEXT_XML;
-    } else if (!strcmp(ext, "avif")) {
-        return IMAGE_AVIF;
-    } else if (!strcmp(ext, "jpg") || !strcmp(ext, "jpeg")) {
-        return IMAGE_JPEG;
-    } else if (!strcmp(ext, "png") || !strcmp(ext, "ico")) {
-        return IMAGE_PNG;
-    } else if (!strcmp(ext, "svg")) {
-        return IMAGE_SVG;
-    } else if (!strcmp(ext, "mpg") || !strcmp(ext, "mpeg")) {
-        return AUDIO_MPEG;
-    } else if (!strcmp(ext, "json") || !strcmp(ext, "map")) {
-        return APPLICATION_JSON;
-    } else if (!strcmp(ext, "pdf")) {
-        return APPLICATION_PDF;
-    } else {
-        return APPLICATION_OCTETSTREAM;
-    }
 }

@@ -35,25 +35,6 @@ typedef struct {
     } body;
 
 } Resp;
-
-enum Mime_Type {
-    TEXT_PLAIN,              //"txt"
-    TEXT_CSS,                // "css"
-    TEXT_CSV,                // "csv"
-    TEXT_HTML,               // "html"
-    TEXT_JS,                 // "js"
-    TEXT_XML,                // "xml"
-    IMAGE_AVIF,              // "avif"
-    IMAGE_JPEG,              // "jpeg", "jpg"
-    IMAGE_PNG,               // "png", "ico"
-    IMAGE_SVG,               // "svg"
-    AUDIO_MPEG,              // "mpg", "mpeg"
-    APPLICATION_JSON,        // "json"
-    APPLICATION_PDF,         // "pdf"
-    APPLICATION_OCTETSTREAM, // ""
-    TEXT_MARKDOWN,           // "md"
-};
-
 Req *http_parse_req(char **lines, size_t line_count);
 
 void req_free(Req *req);
@@ -86,7 +67,5 @@ void dump_dir_list_html(Resp *r, char *dir_name, char *root);
 char *get_file_name(char *url);
 
 void write_redirect(Resp *r, char *uri);
-
-enum Mime_Type get_mime_type(char *url);
 
 #endif

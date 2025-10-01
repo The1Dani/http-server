@@ -15,6 +15,7 @@
 #include "parse_http.h"
 #include "req_handle.h"
 #include "simple_lexer.h"
+#include "mime.h"
 #include <bits/getopt_core.h>
 
 #define ARENA_IMPLEMENTATION
@@ -26,6 +27,9 @@ typedef struct sockaddr sockaddr;
 #define PORT 8080
 #define QUE_LEN 25
 #define BUFF_SIZE 8
+
+// #define DEBUG_MODE
+
 
 void clean_and_exit(int sockfd, int status) {
     close(sockfd);
@@ -90,14 +94,11 @@ void http_send_resp_ok(int connfd, Resp r) {
     close(connfd);
 
 #ifdef DEBUG_MODE
-    if (!strcmp(a_map_get(r.fields, "content-type"), mime_types[TEXT_CSS]))
-        goto end;
-
     TRANSFORM_BUF_TO_C_STR(buf, size);
     printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", GREEN)),
            buf);
 
-end:
+// end:
 #endif
 
     arena_free(arena);
@@ -192,6 +193,10 @@ void sigint_handler(int sig) {
 
 MAKE_FREE_FUNC(ROOT_FOLDER)
 
+void deinit_mime() {
+    deinit(mime_info);
+}
+
 int main(int argc, char **argv) {
 
     {
@@ -246,6 +251,11 @@ int main(int argc, char **argv) {
         printf("Socket could not be created!\n");
         exit(1);
     }
+
+    /*Load Mime to Mem*/
+    mime_info = load_mimes();
+    atexit(deinit_mime);
+
     printf("Socket Created Successfully!\n");
 
     printf("Serving %s on Port %d\n", IP, PORT);

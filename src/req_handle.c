@@ -3,9 +3,12 @@
 #include "external/map.h"
 #include "parse_http.h"
 #include "simple_lexer.h"
+#include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "mime.h"
 
 // #define ROOT_FOLDER "/home/dani/faf/http-server/root/"
 
@@ -14,17 +17,6 @@ char *ROOT_FOLDER = "/home/dani/faf/http-server/root/";
 struct _node {
     char *key;
     char *val;
-};
-
-char *mime_types[] = {"text/plain",      "text/css",
-                      "text/csv",        "text/html",
-                      "text/javascript", "text/xml",
-                      "image/avif",      "image/jpeg",
-                      "image/png",       "image/svg+xml",
-                      "audio/mpeg",      "application/json",
-                      "application/pdf", "application/octet-stream",
-                      "text/markdown"
-
 };
 
 void print_node(struct _node n) {
@@ -133,7 +125,6 @@ void serve_dir_handler(Req *req, Resp *resp) {
     concat(&abs_path, req_file_or_dir);
 
     dump_file_to_body(resp, abs_path);
-    free(abs_path);
 
     switch (resp->body.body_len) {
     case -1:
@@ -150,13 +141,16 @@ void serve_dir_handler(Req *req, Resp *resp) {
         dump_dir_list_html(resp, req_file_or_dir, ROOT_FOLDER);
         break;
     default:
-        enum Mime_Type mime_type = get_mime_type(req_file_or_dir);
-        RESP_FIELD_APPEND(resp, "content-type", mime_types[mime_type]);
+        // enum Mime_Type mime_type = get_mime_type(req_file_or_dir);
+        const char *mime_type = get_mime_from_filename(req_file_or_dir, mime_info);
+        RESP_FIELD_APPEND(resp, "Content-Type", (void *)mime_type);
+        printf("GET %s\n", req_file_or_dir);
         set_status_code(resp, 200, "OK");
         break;
 
     }
 
+    free(abs_path);
     a_map_free(uri_fields);
     free(req_file_or_dir);
 }

@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
     Strings externals = {0};
     Strings tests = {0};
     const char *object_names[] = {"simple_lexer", "parse_http", "url_escape",
-                                  "req_handle"};
+                                  "req_handle", "mime"};
     const char *external_names[] = {"map"};
     const char *test_names[] = {"test01", "test02", "test03"};
 
