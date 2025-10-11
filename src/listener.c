@@ -8,14 +8,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
+#include "mime.h"
 #include "parse_http.h"
 #include "req_handle.h"
 #include "simple_lexer.h"
-#include "mime.h"
 #include <bits/getopt_core.h>
 
 #define ARENA_IMPLEMENTATION
@@ -29,7 +31,6 @@ typedef struct sockaddr sockaddr;
 #define BUFF_SIZE 8
 
 // #define DEBUG_MODE
-
 
 void clean_and_exit(int sockfd, int status) {
     close(sockfd);
@@ -49,14 +50,47 @@ int get_soc_str(char **buff, int connfd) {
     if (*buff != NULL) {
         free(*buff);
     }
+
+    /* Poll the sock connection */
+    fd_set reading;
+    struct timeval timeout;
+    FD_ZERO(&reading);
+    FD_SET(connfd, &reading);
+    int maxsock = FD_SETSIZE;
+
+    memset(&timeout, 0, sizeof(timeout));
+    timeout.tv_sec = 1;
+    int rc = select(maxsock, &reading, NULL, NULL, &timeout);
+
+    if (rc < 0) {
+        printf("Error in select, %s\n", strerror(errno));
+    }
+#ifdef DEBUG_MODE
+    else if (rc == 0) {
+        /* none of the sockets were ready in our little poll */
+        printf("nobody is home.\n");
+    } else {
+        /* at least one of the sockets is ready */
+        printf("conndf is %s for reading\n",
+               FD_ISSET(connfd, &reading) ? "READY" : "NOT READY");
+    }
+#endif
+
     int n_chunk = 1;
     int n;
     char t_buff[BUFF_SIZE];
 
-    while ((n = read(connfd, t_buff, sizeof(t_buff))) == BUFF_SIZE) {
+    while ((n = recv(connfd, t_buff, sizeof(t_buff), MSG_WAITALL)) ==
+           BUFF_SIZE) {
         *buff = realloc(*buff, sizeof(char) * BUFF_SIZE * n_chunk);
         memcpy(*buff + BUFF_SIZE * (n_chunk - 1), t_buff, n);
         n_chunk++;
+    }
+
+    if (n == -1) {
+#ifdef DEBUG_MODE
+        printf("Error, %s\n", strerror(errno));
+#endif
     }
 
     int str_lenght = (n_chunk - 1) * BUFF_SIZE + n;
@@ -71,7 +105,10 @@ int get_soc_str(char **buff, int connfd) {
 
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
 #ifdef DEBUG_MODE
-                fprintf(stderr, "No data available right now, skipping...\n");
+                fprintf(
+                    stderr,
+                    "No data available right now, skipping...\n Error: %s\n",
+                    strerror(errno));
 #endif
             } else {
                 exit(1);
@@ -84,13 +121,32 @@ int get_soc_str(char **buff, int connfd) {
     return str_lenght;
 }
 
+void write_to_socket(int connfd, const char *buf, size_t size) {
+    int written = 0;
+    while ((size_t)written < size) {
+        int w = write(connfd, buf + written, size - written);
+        if (w == -1) {
+            // printf("Error writing to socket, %s\n", strerror(errno));
+            struct timespec req = {0};
+            req.tv_nsec = 1000;
+            nanosleep(&req, NULL);
+            continue;
+        }
+        written += w;
+    }
+    // printf("Written %d bytes to socket, size %zu\n", written, size);
+    assert((size_t)written == (size_t)size);
+}
+
 void http_send_resp_ok(int connfd, Resp r) {
 
     Arena *arena = arena_new(KILOBYTE / 8);
 
     char *buf;
     size_t size = construct_response(&r, (void *)(&buf));
-    write(connfd, buf, size);
+
+    write_to_socket(connfd, buf, size);
+
     close(connfd);
 
 #ifdef DEBUG_MODE
@@ -103,6 +159,28 @@ void http_send_resp_ok(int connfd, Resp r) {
 
     arena_free(arena);
     free(buf);
+}
+
+void return_with_bad_request(int connfd) {
+
+    Arena *arena = arena_new(KILOBYTE / 8);
+    Resp r = {0};
+    r.protocol = "HTTP/1.1";
+    SET_FIELDS_NEW(r);
+    set_status_code(&r, 400, "Bad Request");
+
+    char *buf;
+
+    int size = construct_response(&r, (void *)(&buf));
+    write_to_socket(connfd, buf, size);
+
+    TRANSFORM_BUF_TO_C_STR(buf, size);
+    printf("\n%s %s\n", str_to_arena_ptr(arena, paint_str("[DEBUG]", RED)),
+           buf);
+
+    close(connfd);
+    free(buf);
+    exit(10);
 }
 
 void echo_message(int connfd) {
@@ -133,6 +211,17 @@ void echo_message(int connfd) {
     free(msg_str);
     if (buff == NULL)
         exit(1);
+
+    /*Check for bad request*/
+    /*TLS start code sequance*/
+    // 16 03 01 02 7e 01
+    // 16 03 01 07 4f 01
+    if (da.size > 0) {
+        if (strcmp(da.list[0], "\x16\x03\x01\x02\x7e\x01") == 0 ||
+            strcmp(da.list[0], "\x16\x03\x01\x07\x4f\x01") == 0) {
+            return_with_bad_request(connfd);
+        }
+    }
 
     Req *req = http_parse_req(da.list, da.size);
 
@@ -193,9 +282,7 @@ void sigint_handler(int sig) {
 
 MAKE_FREE_FUNC(ROOT_FOLDER)
 
-void deinit_mime() {
-    deinit(mime_info);
-}
+void deinit_mime() { deinit(mime_info); }
 
 int main(int argc, char **argv) {
 

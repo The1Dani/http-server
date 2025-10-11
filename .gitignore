@@ -6,3 +6,5 @@ listener
 tests/*
 !tests/*.c
 root-*
+book
+cubes

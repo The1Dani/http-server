@@ -47,7 +47,7 @@ void set_status_code(Resp *r, int status_code, char *code_name);
 
 #define SET_FIELDS_NEW(r) r.fields = a_map_new()
 
-#define RESP_FIELD_APPEND(r, key, val) a_map_set(r->fields, key, val)
+#define RESP_FIELD_APPEND(r, key, val) a_map_set((r)->fields, key, val)
 
 #define fields_append a_map_set
 

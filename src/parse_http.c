@@ -79,13 +79,14 @@ Req *http_parse_req(char **lines, size_t line_count) {
     }
     if (n_words != 3) {
         printf("Expected 3 tokens got %d :\n", n_words);
-        for (int i = 1; i <= n_words; i++) {
-            printf("Token %02d: ", i);
-            for (int i = 0; words.list[i - 1][i] != '\0'; i++) {
-                printf("%02x ", words.list[i - 1][i]);
+        for (int i = 0; i < n_words; i++) {
+            printf("Token %02d : ", i + 1);
+            for (int j = 0; words.list[i][j] != '\0'; j++) {
+                printf("%02x '%c' ", words.list[i][j], words.list[i][j]);
             }
             printf("\n");
         }
+
         exit(1);
     }
     req->method = a_strdup(req_arena, words.list[0]);
@@ -278,8 +279,13 @@ size_t construct_response(Resp *r, void *_buf) {
             sprintf(num, "%zu", c_len);
             a_map_set(r->fields, content_len_str, num);
             free(num);
+        } else {
+            RESP_FIELD_APPEND(r, "Content-Length", "0");
         }
     }
+
+    RESP_FIELD_APPEND(r, "Connection", "close");
+    RESP_FIELD_APPEND(r, "Cache-Control", "no-cache" /*"no-store"*/);
 
     size_t off = 0;
     size_t r_size = calc_response_size(*r);
@@ -416,17 +422,16 @@ void dump_dir_list_html(Resp *r, char *dir_name, char *root) {
         concat(&new_uri, comps.dirs.list[i]);
 
         char *santized_path = path_sanitize(new_uri);
-        
+
         // printf("Dir name in html %s\n", new_uri);
         free(new_uri);
-        
+
         char *_sanitized_path = str_to_arena_ptr(arena, santized_path);
-        
+
         da_str_push(da, _sanitized_path);
         da_str_push(da, "\">");
         da_str_push(da, _sanitized_path);
         da_str_push(da, "</a></td></tr>");
-
     }
     for (size_t i = 0; i < comps.files.size; i++) {
         da_str_push(da, "<tr><td><a href=\"");
